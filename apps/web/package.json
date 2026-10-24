@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.4.0",
+    "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/turbopack": "^4.3.3",
     "@types/node": "^20.19.43",
     "@types/react": "^19.3.0",
