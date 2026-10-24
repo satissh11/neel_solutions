@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="460" height="88" viewBox="0 0 460 88" fill="none">
+  <style>
+    @keyframes sprout-sway { 0%,100% { transform: rotate(0deg); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+    .sprout { transform-box: fill-box; transform-origin: center bottom; animation: sprout-sway 3.4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .sprout { animation: none; } }
+  </style>
+  <circle cx="44" cy="44" r="42" fill="#185747"/>
+  <g class="sprout" stroke="#F7FBF8" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.4">
+    <path d="M43 58c1-11 0-21-2-30m2 30c-6-4-11-6-17-7"/>
+    <path d="M26 51c-1-8 3-12 12-12 0 7-4 11-12 12Zm17-12c0-10 5-15 15-15 0 9-5 14-15 15Z"/>
+    <path d="M35 61h18"/>
+  </g>
+  <text x="100" y="43" fill="#1D2C28" font-family="Georgia, 'Times New Roman', serif" font-size="35" font-weight="700" letter-spacing="-1.3">Neel Solutions</text>
+  <text x="102" y="68" fill="#59776D" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="600" letter-spacing="3.1">CREATING HEALTHY WORLD</text>
+</svg>

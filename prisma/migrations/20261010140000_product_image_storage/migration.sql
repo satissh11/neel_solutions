@@ -1,0 +1,1 @@
+ALTER TABLE `ProductImage` MODIFY `url` LONGTEXT NOT NULL;
