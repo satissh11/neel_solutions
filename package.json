@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "main": "scripts/start.js",
-  "engines": { "node": ">=22.0.0" },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -13,10 +15,12 @@
     "build": "npx prisma generate && npm run build --workspaces",
     "start": "node scripts/start.js",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "ts-node prisma/seed.ts",
     "lint": "npm run lint --workspace apps/web"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2"
   }
 }

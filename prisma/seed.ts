@@ -86,24 +86,18 @@ async function main() {
   }
 
   // Seed Admin
-  const adminEmail = process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@neelsolutions.in');
+  const adminEmail = (process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@neelsolutions.in')).toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'admin123');
   if (process.env.NODE_ENV === 'production' && (!adminEmail || adminPassword.length < 12)) {
     throw new Error('Set ADMIN_EMAIL and a unique ADMIN_PASSWORD of at least 12 characters before production seeding.');
   }
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existingAdmin) {
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    await prisma.user.create({
-      data: {
-        name: 'Admin',
-        email: adminEmail,
-        password: hashedPassword,
-        role: 'ADMIN'
-      }
-    });
-    console.log(`Created Admin user (${adminEmail})`);
-  }
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { name: 'Admin', password: hashedPassword, role: 'ADMIN' },
+    create: { name: 'Admin', email: adminEmail, password: hashedPassword, role: 'ADMIN' },
+  });
+  console.log(`Created or updated Admin user (${adminEmail})`);
 
   console.log('Seeding completed.');
 }
