@@ -1,6 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from '@/lib/api';
+import { readApiResponse } from '@/lib/api-response';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,22 +10,28 @@ import type { StoreProduct } from '@/types/store';
 export function ProductGrid() {
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/v1/products`)
-      .then(res => res.json())
+      .then(res => readApiResponse<StoreProduct[]>(res))
       .then(data => {
         setProducts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(err => {
         console.error(err);
+        setError(err instanceof Error ? err.message : 'Could not load products.');
         setLoading(false);
       });
   }, []);
 
   if (loading) {
     return <div className="text-center py-12">Loading products...</div>;
+  }
+
+  if (error) {
+    return <div role="alert" className="text-center py-12 text-red-700">{error}</div>;
   }
 
   if (products.length === 0) {

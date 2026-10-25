@@ -1,6 +1,7 @@
 "use client";
 
 import { API_BASE_URL } from '@/lib/api';
+import { readApiResponse } from '@/lib/api-response';
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
@@ -13,15 +14,19 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/v1/products`)
-      .then(res => res.json())
+      .then(res => readApiResponse<StoreProduct[]>(res))
       .then(data => {
         setProducts(Array.isArray(data) ? data : []);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(reason => {
+        setError(reason instanceof Error ? reason.message : 'Could not load products.');
+        setLoading(false);
+      });
   }, []);
 
   const filtered = useMemo(() => {
@@ -51,6 +56,8 @@ export default function ProductsPage() {
 
           {loading ? (
             <div className="text-center py-16 text-gray-500">Loading products...</div>
+          ) : error ? (
+            <div role="alert" className="text-center py-16 text-red-700">{error}</div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-500">No products found for your search.</div>
           ) : (

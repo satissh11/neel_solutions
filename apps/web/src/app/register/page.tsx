@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/Card';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { readApiResponse } from '@/lib/api-response';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -35,8 +36,7 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Google sign-in failed.');
+      const data = await readApiResponse<{ token: string; user: { id: string; name: string; email: string; role: string } }>(response);
       const requestedPath = new URLSearchParams(window.location.search).get('returnTo');
       const redirectTo = requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
         ? requestedPath
@@ -63,11 +63,7 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
+      await readApiResponse<{ message: string }>(res);
 
       const requestedPath = new URLSearchParams(window.location.search).get('returnTo');
       const redirectTo = requestedPath?.startsWith('/') && !requestedPath.startsWith('//') ? requestedPath : '/';
