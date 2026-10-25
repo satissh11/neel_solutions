@@ -21,11 +21,22 @@ The database on the preview is separate from a local database. Seeding supplies 
 
 ## GoDaddy Node.js Hosting
 
-Use GoDaddy Node.js Hosting or a Linux VPS. The hosting plan must support a Node.js app, and the production database must be reachable from it. GoDaddy requires root `build` and `start` scripts. Confirm the Node.js runtime supported by the purchased plan before publishing because the project currently declares Node.js 22+. See GoDaddy's [Node.js app requirements](https://developer.godaddy.com/en/docs/api-users/hosting/app-requirements).
+Use GoDaddy Node.js Hosting (cPanel "Setup Node.js App" / CloudLinux Passenger) or a Linux VPS. The hosting plan must support a Node.js app (Node 18+, 20+, or 22+), and the production MySQL database must be reachable from it.
 
-1. Confirm the GoDaddy account has Node.js Hosting enabled and an eligible active Web Hosting plan/app slot for publishing.
-2. Create the managed MySQL database and keep its host, database name, username and password private.
-3. Import the project root through GitHub or a ZIP. Include source, workspace manifests, lockfile, migrations and public assets; exclude `node_modules`, `.next`, `dist` and `.env`.
+### GoDaddy cPanel "Setup Node.js App" Settings
+- **Node.js version:** Select `20.x` (or `22.x` / `18.x`).
+- **Application mode:** `Production`
+- **Application root:** `neel_solutions` (or your chosen project folder).
+- **Application startup file:** `app.js` (or `server.js`).
+- **Application URL:** your domain (e.g. `neelsolutions.in`).
+
+Once created:
+1. Click **Run NPM Install** in cPanel.
+2. In terminal or SSH, run `npm run build` (or `npm start` which will automatically detect and run the build if artifacts are missing).
+3. If using cPanel managed MySQL:
+   - Note that database names and usernames in cPanel are prefixed with your cPanel username: `cpaneluser_dbname` and `cpaneluser_dbuser`.
+   - In `DATABASE_URL`, if your database password has special characters (`@`, `#`, `:`, `/`, `%`), URL-encode them (e.g., `@` becomes `%40`, `#` becomes `%23`).
+   - Host is usually `localhost` or `127.0.0.1` for local cPanel MySQL.
 4. Set these secrets/environment values in GoDaddy before building:
    - `DATABASE_URL`: GoDaddy MySQL connection URL (URL-encode special characters in the password).
    - `JWT_SECRET`: unique random value of at least 32 characters.

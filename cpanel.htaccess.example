@@ -1,0 +1,27 @@
+# ==============================================================================
+# GoDaddy cPanel Node.js Configuration Example (.htaccess)
+# ==============================================================================
+# 
+# OPTION 1: Using cPanel "Setup Node.js App" (Recommended for GoDaddy Shared/cPanel)
+# When you create the app in cPanel -> "Setup Node.js App", cPanel automatically
+# manages the Passenger configuration block below. Ensure "Application startup file"
+# is set to: app.js
+#
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+# PassengerAppRoot "/home/your_username/public_html"
+# PassengerBaseURI "/"
+# PassengerNodejs "/home/your_username/nodevenv/public_html/20/bin/node"
+# PassengerAppType node
+# PassengerStartupFile app.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+#
+# ------------------------------------------------------------------------------
+# OPTION 2: Reverse Proxy to Node.js (If running Node.js as background service on port 3000)
+# ------------------------------------------------------------------------------
+# <IfModule mod_rewrite.c>
+#   RewriteEngine On
+#   RewriteRule ^$ http://127.0.0.1:3000/ [P,L]
+#   RewriteCond %{REQUEST_FILENAME} !-f
+#   RewriteCond %{REQUEST_FILENAME} !-d
+#   RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+# </IfModule>

@@ -27,14 +27,18 @@ import adminRoutes from './routes/admin.routes';
 import settingsRoutes from './routes/settings.routes';
 import whatsappWebhookRoutes from './routes/whatsapp-webhook.routes';
 
-app.use('/api/v1/health', async (req, res) => {
+const handleHealthCheck = async (_req: express.Request, res: express.Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', database: 'connected', app: APP_NAME, timestamp: new Date().toISOString() });
   } catch {
     res.status(503).json({ status: 'error', database: 'unavailable', app: APP_NAME, timestamp: new Date().toISOString() });
   }
-});
+};
+
+app.use('/api/v1/health', handleHealthCheck);
+app.use('/api/health', handleHealthCheck);
+app.use('/health', handleHealthCheck);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);

@@ -2,9 +2,9 @@
   "name": "neel-solutions",
   "version": "1.0.0",
   "private": true,
-  "main": "scripts/start.js",
+  "main": "app.js",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=18.18.0"
   },
   "workspaces": [
     "apps/*",
@@ -12,14 +12,15 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspaces",
-    "build": "npx prisma generate && npm run build --workspaces",
-    "start": "node scripts/start.js",
+    "build": "npx prisma generate && npm run build --workspace=@neel-solutions/shared && npm run build --workspace=api && npm run build --workspace=web",
+    "start": "node app.js",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
     "lint": "npm run lint --workspace apps/web"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "dotenv": "^16.4.0",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2"
   }
