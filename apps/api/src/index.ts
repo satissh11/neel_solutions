@@ -6,7 +6,7 @@ import { prisma } from './lib/prisma';
 import { startWhatsAppQueue } from './lib/whatsapp-queue';
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = Number(process.env.PORT || 5000);
 
 const allowedOrigins = (process.env.WEB_ORIGIN || 'http://localhost:3000')
   .split(',').map(origin => origin.trim()).filter(Boolean);
@@ -49,7 +49,13 @@ if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || process
   throw new Error('Set a unique JWT_SECRET of at least 32 characters before starting in production.');
 }
 
-app.listen(port, () => {
-  console.log(`[API] Server is running on port ${port}`);
-  startWhatsAppQueue();
-});
+// Export the Express app so the production web server can mount the API on
+// GoDaddy's single assigned PORT. Keep standalone API startup for local use.
+if (require.main === module) {
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`[API] Server is running on port ${port}`);
+    startWhatsAppQueue();
+  });
+}
+
+export { app as apiApp, startWhatsAppQueue };

@@ -1,76 +1,43 @@
-const { spawn } = require('node:child_process');
+const path = require('node:path');
+const { createServer } = require('node:http');
 
-const isWindows = process.platform === 'win32';
-const npm = isWindows ? 'npm.cmd' : 'npm';
-const apiPort = process.env.API_PORT || '5000';
-const webPort = process.env.PORT || '3000';
-
-async function isRunning(port, path, matches) {
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}${path}`, {
-      signal: AbortSignal.timeout(2500),
-    });
-    const body = await response.text();
-    if (!matches(response.status, body)) {
-      throw new Error(`Port ${port} is responding, but not with the expected Neel Solutions service.`);
-    }
-    return true;
-  } catch (error) {
-    if (error.name === 'AbortError' || error.name === 'TimeoutError' || error.cause?.code === 'ECONNREFUSED') {
-      return false;
-    }
-    throw error;
-  }
-}
+const projectRoot = path.resolve(__dirname, '..');
+const webDir = path.join(projectRoot, 'apps', 'web');
+const port = Number(process.env.PORT || 3000);
 
 async function start() {
-  if (apiPort === webPort) {
-    throw new Error('API_PORT and PORT must be different.');
-  }
+  // GoDaddy Node.js hosting provides one public application port. Mount the
+  // API and Next.js on the same HTTP server instead of binding a blocked 5000.
+  // This root start command always uses the in-process API, even if an old
+  // API_INTERNAL_URL value is still present in the hosting environment.
+  delete process.env.API_INTERNAL_URL;
+  const next = require(require.resolve('next', { paths: [webDir] }));
+  const { apiApp, startWhatsAppQueue } = require(path.join(projectRoot, 'apps', 'api', 'dist', 'index.js'));
+  const nextApp = next({ dev: false, dir: webDir, hostname: '0.0.0.0', port });
+  await nextApp.prepare();
+  const handleNext = nextApp.getRequestHandler();
 
-  const apiRunning = await isRunning(
-    apiPort,
-    '/api/v1/health',
-    (status, body) => (status === 200 || status === 503) && body.includes('"app":"Neel Solutions"'),
-  );
-  const webRunning = await isRunning(
-    webPort,
-    '/',
-    (status, body) => status >= 200 && status < 400 && /<title>Neel Solutions\b/i.test(body),
-  );
-
-  if (apiRunning && webRunning) {
-    console.log(`Neel Solutions is already running at http://localhost:${webPort} (API: ${apiPort}).`);
-    return;
-  }
-
-  const api = apiRunning ? null : spawn(npm, ['run', 'start', '--workspace=api'], {
-    stdio: 'inherit',
-    shell: isWindows,
-    env: { ...process.env, PORT: apiPort },
-  });
-  const web = webRunning ? null : spawn(npm, ['run', 'start', '--workspace=web'], {
-    stdio: 'inherit',
-    shell: isWindows,
-    env: { ...process.env, PORT: webPort, API_INTERNAL_URL: process.env.API_INTERNAL_URL || `http://127.0.0.1:${apiPort}` },
+  const server = createServer((req, res) => {
+    const pathname = (req.url || '/').split('?', 1)[0];
+    const isApiRequest = pathname === '/api' || pathname.startsWith('/api/') || pathname === '/webhook' || pathname.startsWith('/webhook/');
+    if (isApiRequest) {
+      apiApp(req, res, () => handleNext(req, res));
+      return;
+    }
+    handleNext(req, res);
   });
 
-  let stopping = false;
-  function stop(code = 0) {
-    if (stopping) return;
-    stopping = true;
-    api?.kill();
-    web?.kill();
-    process.exitCode = code;
-  }
-
-  api?.on('exit', code => { if (!stopping) stop(code || 1); });
-  web?.on('exit', code => { if (!stopping) stop(code || 1); });
-  process.on('SIGINT', () => stop(0));
-  process.on('SIGTERM', () => stop(0));
+  server.on('error', error => {
+    console.error('[start] HTTP server error:', error.message);
+    process.exitCode = 1;
+  });
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`[start] Neel Solutions web and API listening on assigned port ${port}`);
+    startWhatsAppQueue();
+  });
 }
 
 start().catch(error => {
-  console.error(`[start] ${error.message}`);
+  console.error('[start] Startup failed:', error);
   process.exitCode = 1;
 });
