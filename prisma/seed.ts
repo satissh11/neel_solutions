@@ -19,10 +19,13 @@ async function main() {
   // Create sample products
   await prisma.product.upsert({
     where: { sku: 'NS-WHEY-001' },
-    update: {},
+    update: {
+      name: 'Tulsi — Natural Heritage',
+      description: 'Discover the natural heritage of tulsi with this wellness product.',
+    },
     create: {
-      name: 'Premium Whey Protein',
-      description: 'High-quality whey protein isolate for muscle recovery.',
+      name: 'Tulsi — Natural Heritage',
+      description: 'Discover the natural heritage of tulsi with this wellness product.',
       price: 2499.00,
       stock: 100,
       sku: 'NS-WHEY-001',
@@ -32,10 +35,13 @@ async function main() {
 
   await prisma.product.upsert({
     where: { sku: 'NS-VITA-002' },
-    update: {},
+    update: {
+      name: 'Moringa',
+      description: 'A moringa-based wellness product for your everyday routine.',
+    },
     create: {
-      name: 'Multivitamin Complex',
-      description: 'Essential daily vitamins and minerals.',
+      name: 'Moringa',
+      description: 'A moringa-based wellness product for your everyday routine.',
       price: 899.00,
       stock: 200,
       sku: 'NS-VITA-002',
