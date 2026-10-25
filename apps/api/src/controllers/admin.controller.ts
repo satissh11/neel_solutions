@@ -256,7 +256,11 @@ export const getPublicSiteSettings = async (req: Request, res: Response) => {
       heroImageUrl: publicHeroImages[0] || '',
     });
   } catch {
-    res.status(500).json({ error: 'Failed to fetch site settings.' });
+    res.json({
+      logoUrl: '/brand-logo.svg',
+      heroImages: [],
+      heroImageUrl: '',
+    });
   }
 };
 
