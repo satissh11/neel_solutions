@@ -65,9 +65,14 @@ export default function ProductsPage() {
               {filtered.map((product) => (
                 <div key={product.id} className="motion-card group flex flex-col rounded-2xl border border-white/80 bg-white/95 p-4 shadow-md shadow-emerald-950/5 backdrop-blur-sm">
                   <div className="mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-lime-50 text-gray-500">
-                    {product.images?.[0] ? (
+                    {product.images?.[0]?.url ? (
                       <Image src={product.images[0].url} alt={product.name} width={500} height={500} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                    ) : 'No Image'}
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-4 text-center">
+                        <span className="text-4xl mb-2">🌿</span>
+                        <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">{product.category?.name || 'Wellness'}</span>
+                      </div>
+                    )}
                   </div>
                   <span className="mb-1 text-xs font-semibold text-emerald-800">{product.category?.name}</span>
                   <h3 className="font-semibold text-gray-950 transition-colors group-hover:text-emerald-800">

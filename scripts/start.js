@@ -87,6 +87,30 @@ async function start() {
     }
   }
 
+  // If DATABASE_URL is present, automatically run migrations and initial seed if database is empty
+  if (process.env.DATABASE_URL) {
+    try {
+      console.log('[start] Checking database migrations (prisma migrate deploy)...');
+      const { execSync } = require('node:child_process');
+      execSync('npx prisma migrate deploy', { cwd: projectRoot, stdio: 'inherit' });
+    } catch (migErr) {
+      console.warn('[start] Database migration notice:', migErr.message);
+    }
+
+    try {
+      const { prisma } = require(path.join(projectRoot, 'apps', 'api', 'dist', 'lib', 'prisma.js'));
+      const productCount = await prisma.product.count();
+      if (productCount === 0) {
+        console.log('[start] Fresh database detected (0 products). Seeding starter products and categories...');
+        const { execSync } = require('node:child_process');
+        execSync('npm run db:seed', { cwd: projectRoot, stdio: 'inherit' });
+        console.log('[start] Starter products seeded successfully.');
+      }
+    } catch (seedErr) {
+      console.warn('[start] Database seed notice:', seedErr.message);
+    }
+  }
+
   const next = require(require.resolve('next', { paths: [webDir] }));
   const { apiApp, startWhatsAppQueue } = require(apiDistPath);
 

@@ -55,10 +55,14 @@ function ProductDetail() {
       <div className="motion-card grid grid-cols-1 gap-8 rounded-3xl border border-white/80 bg-white/95 p-5 shadow-xl shadow-emerald-950/5 backdrop-blur-sm md:grid-cols-2 md:gap-10 md:p-8">
         {/* Product Image */}
         <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-lime-50">
-          {product.images?.[0] ? (
+          {product.images?.[0]?.url ? (
             <Image src={product.images[0].url} alt={product.name} width={720} height={720} unoptimized className="object-cover w-full h-full" />
           ) : (
-            <span className="text-gray-400">No Image Available</span>
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <span className="text-6xl mb-3">🌿</span>
+              <span className="text-sm font-semibold text-emerald-800 uppercase tracking-wider">{product.category?.name || 'Neel Solutions'}</span>
+              <span className="text-xs text-gray-500 mt-1">100% Natural Wellness</span>
+            </div>
           )}
         </div>
         {/* Product Info */}

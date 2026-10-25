@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#d1fae5"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="leafLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="32" fill="url(#bg)"/>
+  <circle cx="200" cy="200" r="140" fill="#ffffff" opacity="0.6"/>
+  <g transform="translate(200, 200)">
+    <!-- Stem -->
+    <path d="M0,90 Q-5,0 0,-70" stroke="#065f46" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <!-- Top central leaf -->
+    <path d="M0,-70 C-20,-105 0,-130 0,-130 C0,-130 20,-105 0,-70 Z" fill="url(#leaf)"/>
+    <!-- Left leaves -->
+    <path d="M-2,-30 C-35,-45 -55,-25 -55,-25 C-55,-25 -40,-5 -2,-15 Z" fill="url(#leafLight)"/>
+    <path d="M-2,15 C-45,5 -65,30 -65,30 C-65,30 -45,45 -2,25 Z" fill="url(#leaf)"/>
+    <path d="M-2,55 C-40,50 -55,75 -55,75 C-55,75 -35,85 -2,65 Z" fill="url(#leafLight)"/>
+    <!-- Right leaves -->
+    <path d="M2,-30 C35,-45 55,-25 55,-25 C55,-25 40,-5 2,-15 Z" fill="url(#leafLight)"/>
+    <path d="M2,15 C45,5 65,30 65,30 C65,30 45,45 2,25 Z" fill="url(#leaf)"/>
+    <path d="M2,55 C40,50 55,75 55,75 C55,75 35,85 2,65 Z" fill="url(#leafLight)"/>
+  </g>
+  <text x="200" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="700" fill="#065f46" text-anchor="middle" letter-spacing="2">TULSI · NATURAL HERITAGE</text>
+  <text x="200" y="365" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="500" fill="#047857" text-anchor="middle">100% PURE &amp; NATURAL</text>
+</svg>
