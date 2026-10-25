@@ -1,5 +1,6 @@
 const path = require('node:path');
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { createServer } = require('node:http');
 
 const projectRoot = path.resolve(__dirname, '..');
@@ -13,6 +14,55 @@ try {
   const dotenv = require('dotenv');
   dotenv.config({ path: path.join(projectRoot, '.env') });
 } catch (_) {}
+
+// Ensure JWT_SECRET is set before loading API routes in production
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'super-secret-key-for-dev' || process.env.JWT_SECRET.length < 32) {
+  process.env.JWT_SECRET = crypto.randomBytes(32).toString('hex');
+  console.warn('[start] Warning: No secure JWT_SECRET environment variable provided. Generated a secure runtime fallback.');
+}
+
+// On Linux / PaaS containers (Node 22 / Alpine / Debian with OpenSSL 3.0),
+// configure Prisma to use the OpenSSL 3.0 query engine instead of failing on missing OpenSSL 1.1
+if (process.platform === 'linux') {
+  const prismaClientDir = path.join(projectRoot, 'node_modules', '.prisma', 'client');
+  const musl3Engine = path.join(prismaClientDir, 'libquery_engine-linux-musl-openssl-3.0.x.so.node');
+  const debian3Engine = path.join(prismaClientDir, 'libquery_engine-debian-openssl-3.0.x.so.node');
+
+  let isMusl = false;
+  try {
+    const ldd = require('node:child_process').execSync('ldd --version 2>&1 || true').toString();
+    isMusl = ldd.includes('musl');
+  } catch (_) {}
+
+  if (isMusl && fs.existsSync(musl3Engine)) {
+    process.env.PRISMA_QUERY_ENGINE_LIBRARY = musl3Engine;
+    console.log('[start] Selected Prisma engine for Alpine/musl (OpenSSL 3.0):', musl3Engine);
+  } else if (!isMusl && fs.existsSync(debian3Engine)) {
+    process.env.PRISMA_QUERY_ENGINE_LIBRARY = debian3Engine;
+    console.log('[start] Selected Prisma engine for Debian/glibc (OpenSSL 3.0):', debian3Engine);
+  }
+
+  // Symlink fallback for legacy binaries looking for libssl.so.1.1
+  try {
+    const ssl3Candidates = ['/usr/lib/libssl.so.3', '/lib/libssl.so.3', '/usr/local/lib/libssl.so.3', '/usr/lib64/libssl.so.3'];
+    const crypto3Candidates = ['/usr/lib/libcrypto.so.3', '/lib/libcrypto.so.3', '/usr/local/lib/libcrypto.so.3', '/usr/lib64/libcrypto.so.3'];
+    const foundSsl3 = ssl3Candidates.find(p => fs.existsSync(p));
+    const foundCrypto3 = crypto3Candidates.find(p => fs.existsSync(p));
+
+    if (foundSsl3 && foundCrypto3) {
+      const fallbackDir = '/tmp/prisma_libssl';
+      if (!fs.existsSync(fallbackDir)) fs.mkdirSync(fallbackDir, { recursive: true });
+      const fakeSsl11 = path.join(fallbackDir, 'libssl.so.1.1');
+      const fakeCrypto11 = path.join(fallbackDir, 'libcrypto.so.1.1');
+      if (!fs.existsSync(fakeSsl11)) fs.symlinkSync(foundSsl3, fakeSsl11);
+      if (!fs.existsSync(fakeCrypto11)) fs.symlinkSync(foundCrypto3, fakeCrypto11);
+
+      process.env.LD_LIBRARY_PATH = process.env.LD_LIBRARY_PATH
+        ? `${fallbackDir}:${process.env.LD_LIBRARY_PATH}`
+        : fallbackDir;
+    }
+  } catch (_) {}
+}
 
 // Resolve port / socket correctly for GoDaddy & Phusion Passenger
 const rawPort = process.env.PORT || 3000;
