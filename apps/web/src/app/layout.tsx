@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
+import { SiteIntro } from "@/components/SiteIntro";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <SiteSettingsProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              <SiteIntro>{children}</SiteIntro>
+            </CartProvider>
           </SiteSettingsProvider>
         </AuthProvider>
       </body>

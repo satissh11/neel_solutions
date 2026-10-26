@@ -81,7 +81,7 @@ npm run dev --workspace=web
 
 | URL | Description |
 |---|---|
-| `/welcome` | Branded landing page |
+| Site entry | Animated Neel Solutions nature intro, followed by the storefront |
 | `/` | Storefront home with products |
 | `/products` | Full catalogue with search |
 | `/products/[id]` | Product detail + Add to cart |
