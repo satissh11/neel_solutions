@@ -5,7 +5,7 @@ import { parseUploadedImage, productWithImageUrls } from '../lib/image';
 export const FALLBACK_PRODUCTS = [
   {
     id: 'prod-tulsi-001',
-    name: 'Tulsi — Natural Heritage',
+    name: 'Tulsi09 — Natural Heritage',
     description: 'Discover the natural heritage of tulsi with this wellness product. Handcrafted to support immunity, vitality, and inner balance.',
     price: 2499.00,
     stock: 100,
