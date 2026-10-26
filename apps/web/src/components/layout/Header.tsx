@@ -14,17 +14,17 @@ export function Header() {
   const { logoUrl } = useSiteSettings();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-emerald-100 bg-white/90 shadow-sm shadow-emerald-950/5 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b border-[#e8ddca] bg-[#f8f6ef]/95 shadow-sm shadow-[#665c44]/5 backdrop-blur-xl">
       <div className="container mx-auto flex min-h-16 flex-wrap items-center justify-between gap-y-1 px-4 py-2 md:h-16 md:flex-nowrap md:py-0">
         <Link href="/" aria-label="Neel Solutions home" className="brand-logo-frame flex min-w-0 shrink-0 items-center">
-          <Image src={logoUrl || '/brand-logo.svg'} alt="Neel Solutions — Creating Healthy World" width={220} height={56} unoptimized className="h-10 w-auto max-w-[180px] object-contain sm:max-w-[220px] md:h-12" />
+          <Image src={logoUrl || '/brand-logo.svg'} alt="Neel Solutions — Creating Healthy World" width={220} height={56} unoptimized style={{ width: 'auto' }} className="h-10 w-auto max-w-[180px] object-contain sm:max-w-[220px] md:h-12" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6">
-          <Link href="/" className="text-sm font-medium text-gray-700 transition-colors hover:text-emerald-800">Home</Link>
-          <Link href="/products" className="text-sm font-medium text-gray-700 transition-colors hover:text-emerald-800">Products</Link>
-          <Link href="/about" className="text-sm font-medium text-gray-700 transition-colors hover:text-emerald-800">About</Link>
-          <Link href="/contact" className="text-sm font-medium text-gray-700 transition-colors hover:text-emerald-800">Contact</Link>
+        <nav className="hidden md:flex items-center gap-7">
+          <Link href="/" className="text-sm font-medium text-[#625f58] transition-colors hover:text-[#52765a]">Home</Link>
+          <Link href="/products" className="text-sm font-medium text-[#625f58] transition-colors hover:text-[#52765a]">Shop</Link>
+          <Link href="/about" className="text-sm font-medium text-[#625f58] transition-colors hover:text-[#52765a]">About</Link>
+          <Link href="/contact" className="text-sm font-medium text-[#625f58] transition-colors hover:text-[#52765a]">Contact</Link>
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 md:ml-0 md:gap-4">
@@ -49,6 +49,7 @@ export function Header() {
               <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-800 text-xs text-white">{totalItems}</span>
             )}
           </Link>
+          <Link href="/products" className="hidden min-h-10 items-center rounded-full bg-[#789b80] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#62866b] md:inline-flex">Shop Now</Link>
           
           {user ? (
             <div className="hidden items-center gap-3 ml-2 border-l pl-4 md:flex">

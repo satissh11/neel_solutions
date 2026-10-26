@@ -11,6 +11,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
 import type { StoreProduct } from '@/types/store';
+import { displayProductName } from '@/types/store';
 
 function ProductDetail() {
   const { id } = useParams();
@@ -31,7 +32,7 @@ function ProductDetail() {
     if (!product) return;
     addItem({
       id: product.id,
-      name: product.name,
+      name: displayProductName(product.name),
       price: Number(product.price),
       quantity: qty,
       image: product.images?.[0]?.url,
@@ -56,7 +57,7 @@ function ProductDetail() {
         {/* Product Image */}
         <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-50 to-lime-50">
           {product.images?.[0]?.url ? (
-            <Image src={product.images[0].url} alt={product.name} width={720} height={720} unoptimized className="object-cover w-full h-full" />
+            <Image src={product.images[0].url} alt={displayProductName(product.name)} width={720} height={720} unoptimized className="object-cover w-full h-full" />
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <span className="text-6xl mb-3">🌿</span>
@@ -70,7 +71,7 @@ function ProductDetail() {
           <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-900">
             {product.category?.name}
           </span>
-          <h1 className="text-3xl font-bold text-gray-950 md:text-4xl">{product.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-950 md:text-4xl">{displayProductName(product.name)}</h1>
           <p className="text-gray-600 leading-relaxed">{product.description}</p>
           <div className="mt-2 text-4xl font-extrabold text-emerald-950">
             ₹{Number(product.price).toFixed(2)}

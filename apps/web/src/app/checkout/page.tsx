@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { displayProductName } from '@/types/store';
 
 function CheckoutForm() {
   const { items, totalPrice, clearCart } = useCart();
@@ -176,7 +177,7 @@ function CheckoutForm() {
           <div className="space-y-3">
             {items.map(item => (
               <div key={item.id} className="flex justify-between text-sm text-gray-800">
-                <span>{item.name} × {item.quantity}</span>
+                <span>{displayProductName(item.name)} × {item.quantity}</span>
                 <span className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
             ))}

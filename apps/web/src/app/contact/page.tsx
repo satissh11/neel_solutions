@@ -4,58 +4,68 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import type { FormEvent } from 'react';
 
 export default function ContactPage() {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const subject = `Website enquiry from ${String(form.get('name'))}`;
+    const body = `Name: ${String(form.get('name'))}\nEmail: ${String(form.get('email'))}\n\n${String(form.get('message'))}`;
+    window.location.href = `mailto:neelengineering2022@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
-      <main className="flex-1 bg-gray-50">
-        <div className="container mx-auto px-4 py-16 max-w-5xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 bg-white p-8 rounded-xl shadow-sm">
-            
+      <main className="flex-1 bg-[#f8f6ef]">
+        <section className="border-b border-[#e8ddca] bg-[#f0efe5] py-12 md:py-16">
+          <div className="container mx-auto px-4 md:px-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#78977d]">We’re here to help</p>
+            <h1 className="text-4xl leading-tight tracking-[-0.035em] md:text-5xl">Contact Neel Solutions</h1>
+            <p className="mt-4 max-w-2xl leading-7 text-[#625f58]">Questions about a product or order? Send a note to our team.</p>
+          </div>
+        </section>
+        <div className="container mx-auto grid max-w-6xl gap-6 px-4 py-10 md:grid-cols-[.8fr_1.2fr] md:px-8 md:py-16">
+          <div className="rounded-[1.4rem] border border-[#e4d6bb] bg-[#f0efe5] p-6 md:p-8">
             {/* Contact Info */}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1>
-              <p className="text-gray-600 mb-8">
-                Have a question about our products or your order? We&apos;re here to help. Reach out to us using the details below or fill out the form.
-              </p>
-              
-              <div className="space-y-4">
+              <h2 className="mb-6 text-2xl">Get in touch</h2>
+              <div className="space-y-5">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Email Support</h3>
-                  <a href="mailto:neelengineering2022@gmail.com" className="text-blue-600 hover:underline">
+                  <h3 className="mb-1 font-semibold text-[#17151a]">Email support</h3>
+                  <a href="mailto:neelengineering2022@gmail.com" className="text-sm text-[#587960] hover:underline">
                     neelengineering2022@gmail.com
                   </a>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Business Name</h3>
-                  <p className="text-gray-600">Neel Solutions (Neel Group)</p>
+                  <h3 className="mb-1 font-semibold text-[#17151a]">Business</h3>
+                  <p className="text-sm text-[#625f58]">Neel Solutions (Neel Group)</p>
                 </div>
               </div>
             </div>
-
-            {/* Contact Form */}
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert('Message sent!'); }}>
+          </div>
+          <form className="space-y-4 rounded-[1.4rem] border border-[#e4d6bb] bg-[#fbf8f1] p-6 md:p-8" onSubmit={handleSubmit}>
+              <h2 className="mb-2 text-2xl">Send us a message</h2>
               <div>
-                <label className="text-sm font-medium text-gray-700">Name</label>
-                <Input required className="mt-1" />
+                <label htmlFor="contact-name" className="text-sm font-medium text-gray-700">Name</label>
+                <Input id="contact-name" name="name" required className="mt-1" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Email Address</label>
-                <Input type="email" required className="mt-1" />
+                <label htmlFor="contact-email" className="text-sm font-medium text-gray-700">Email Address</label>
+                <Input id="contact-email" name="email" type="email" required className="mt-1" />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Message</label>
+                <label htmlFor="contact-message" className="text-sm font-medium text-gray-700">Message</label>
                 <textarea 
-                  required 
+                  id="contact-message" name="message" required
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mt-1 min-h-[120px]"
                 ></textarea>
               </div>
-              <Button type="submit" className="w-full">Send Message</Button>
-            </form>
-
+              <Button type="submit" className="w-full sm:w-auto">Continue in email</Button>
+              <p className="text-xs leading-5 text-[#79766d]">Your email app will open with your message addressed to our support team.</p>
+          </form>
           </div>
-        </div>
       </main>
       <Footer />
     </div>

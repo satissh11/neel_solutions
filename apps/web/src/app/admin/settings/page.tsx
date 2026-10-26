@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
+import { DEFAULT_HOME_CONTENT, type HomeContent } from '@/types/home-content';
 
 const maxHeroImages = 6;
 const maxImageSize = 5 * 1024 * 1024;
@@ -23,6 +24,7 @@ export default function StoreSettingsPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [heroImages, setHeroImages] = useState<string[]>([]);
   const [heroImageDraft, setHeroImageDraft] = useState('');
+  const [homeContent, setHomeContent] = useState<HomeContent>(DEFAULT_HOME_CONTENT);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -35,6 +37,7 @@ export default function StoreSettingsPage() {
         if (!response.ok) throw new Error(data.error || 'Could not load store branding.');
         setLogoUrl(data.logoUrl || '');
         setHeroImages(Array.isArray(data.heroImages) ? data.heroImages : data.heroImageUrl ? [data.heroImageUrl] : []);
+        setHomeContent({ ...DEFAULT_HOME_CONTENT, ...(data.homeContent || {}) });
       })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load store branding.'));
   }, [token]);
@@ -74,6 +77,28 @@ export default function StoreSettingsPage() {
     setError('');
   };
 
+  function updateContent<K extends keyof HomeContent>(key: K, value: HomeContent[K]) {
+    setHomeContent(current => ({ ...current, [key]: value }));
+  }
+
+  const uploadStoryImage = async (file: File | undefined) => {
+    if (!file) return;
+    setError('');
+    if (!acceptedTypes.includes(file.type)) return setError('Story image must be a PNG, JPEG, or WebP image.');
+    if (file.size > maxImageSize) return setError('Story image must be 5 MB or smaller.');
+    try { updateContent('storyImageUrl', await readImage(file)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read story image.'); }
+  };
+
+  const uploadAboutImage = async (file: File | undefined) => {
+    if (!file) return;
+    setError('');
+    if (!acceptedTypes.includes(file.type)) return setError('About image must be a PNG, JPEG, or WebP image.');
+    if (file.size > maxImageSize) return setError('About image must be 5 MB or smaller.');
+    try { updateContent('aboutImageUrl', await readImage(file)); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read About image.'); }
+  };
+
   const save = async (event: FormEvent) => {
     event.preventDefault();
     if (!token) return;
@@ -84,7 +109,7 @@ export default function StoreSettingsPage() {
       const response = await fetch(`${API_BASE_URL}/api/v1/admin/settings`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ logoUrl, heroImages }),
+        body: JSON.stringify({ logoUrl, heroImages, homeContent }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not save store branding.');
@@ -142,6 +167,99 @@ export default function StoreSettingsPage() {
           ) : (
             <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-7 text-center text-sm text-gray-600">No slideshow images yet. Upload some to preview them here.</div>
           )}
+        </section>
+
+        <section className="space-y-4 border-t border-gray-200 pt-6">
+          <div>
+            <h2 className="font-semibold text-gray-900">Homepage text</h2>
+            <p className="mt-1 text-sm text-gray-600">Edit the hero and product highlight headings and copy.</p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3"><span className="text-sm font-medium text-gray-700">Trust strip</span><button type="button" onClick={() => updateContent('trustItems', [...homeContent.trustItems, ''])} className="rounded-lg border border-emerald-800 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:bg-emerald-50">Add item</button></div>
+            {homeContent.trustItems.map((label, index) => <div key={index} className="flex gap-2"><input aria-label={`Trust item ${index + 1}`} value={label} onChange={event => updateContent('trustItems', homeContent.trustItems.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" /><button type="button" onClick={() => updateContent('trustItems', homeContent.trustItems.filter((_, itemIndex) => itemIndex !== index))} className="text-sm font-medium text-red-700 hover:underline">Remove</button></div>)}
+          </div>
+          {([
+            ['heroEyebrow', 'Hero eyebrow'], ['heroTitle', 'Hero heading'], ['heroDescription', 'Hero description'], ['heroPrimaryLabel', 'Hero main button'], ['heroSecondaryLabel', 'Hero second button'],
+            ['highlightsEyebrow', 'Product section eyebrow'], ['highlightsTitle', 'Product section heading'], ['highlightsDescription', 'Product section description'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="block space-y-1.5 text-sm font-medium text-gray-700">{label}
+              <textarea rows={key.includes('Description') || key === 'heroDescription' ? 2 : 1} value={homeContent[key]} onChange={event => updateContent(key, event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+            </label>
+          ))}
+        </section>
+
+        <section className="space-y-4 border-t border-gray-200 pt-6">
+          <div className="flex items-center justify-between gap-3">
+            <div><h2 className="font-semibold text-gray-900">Ingredient cards</h2><p className="mt-1 text-sm text-gray-600">Change the scrolling cards, or add and remove ingredients.</p></div>
+            <button type="button" onClick={() => updateContent('ingredients', [...homeContent.ingredients, { name: '', note: '' }])} className="shrink-0 rounded-lg border border-emerald-800 px-3 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50">Add ingredient</button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {homeContent.ingredients.map((ingredient, index) => (
+              <div key={index} className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <input aria-label={`Ingredient ${index + 1} name`} value={ingredient.name} onChange={event => updateContent('ingredients', homeContent.ingredients.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item))} placeholder="Ingredient name" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+                <input aria-label={`Ingredient ${index + 1} description`} value={ingredient.note} onChange={event => updateContent('ingredients', homeContent.ingredients.map((item, itemIndex) => itemIndex === index ? { ...item, note: event.target.value } : item))} placeholder="Short description" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+                <button type="button" onClick={() => updateContent('ingredients', homeContent.ingredients.filter((_, itemIndex) => itemIndex !== index))} className="justify-self-start text-sm font-medium text-red-700 hover:underline">Remove ingredient</button>
+              </div>
+            ))}
+          </div>
+          {([
+            ['ingredientsEyebrow', 'Ingredient section eyebrow'], ['ingredientsTitle', 'Ingredient section heading'],
+          ] as const).map(([key, label]) => <label key={key} className="block space-y-1.5 text-sm font-medium text-gray-700">{label}<input value={homeContent[key]} onChange={event => updateContent(key, event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" /></label>)}
+        </section>
+
+        <section className="space-y-4 border-t border-gray-200 pt-6">
+          <div className="flex items-center justify-between gap-3">
+            <div><h2 className="font-semibold text-gray-900">Wellness quotes</h2><p className="mt-1 text-sm text-gray-600">Quotes appear beside the first product highlights.</p></div>
+            <button type="button" onClick={() => updateContent('wellnessQuotes', [...homeContent.wellnessQuotes, ''])} className="shrink-0 rounded-lg border border-emerald-800 px-3 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50">Add quote</button>
+          </div>
+          {homeContent.wellnessQuotes.map((quote, index) => (
+            <div key={index} className="flex items-start gap-2">
+              <textarea aria-label={`Wellness quote ${index + 1}`} rows={2} value={quote} onChange={event => updateContent('wellnessQuotes', homeContent.wellnessQuotes.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+              <button type="button" onClick={() => updateContent('wellnessQuotes', homeContent.wellnessQuotes.filter((_, itemIndex) => itemIndex !== index))} className="rounded-lg px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50">Delete</button>
+            </div>
+          ))}
+        </section>
+
+        <section className="space-y-4 border-t border-gray-200 pt-6">
+          <div><h2 className="font-semibold text-gray-900">Customer stories and standards</h2><p className="mt-1 text-sm text-gray-600">Edit section copy and the three service detail cards.</p></div>
+          {([
+            ['reviewEyebrow', 'Customer stories eyebrow'], ['reviewTitle', 'Customer stories heading'], ['reviewDescription', 'Customer stories description'], ['reviewFormTitle', 'Review form heading'], ['reviewFormDescription', 'Review form note'], ['standardsEyebrow', 'Detail cards eyebrow'], ['standardsTitle', 'Detail cards heading'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="block space-y-1.5 text-sm font-medium text-gray-700">{label}
+              <textarea rows={2} value={homeContent[key]} onChange={event => updateContent(key, event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+            </label>
+          ))}
+          {homeContent.standards.map((item, index) => (
+            <div key={index} className="grid gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-2">
+              <input aria-label={`Detail card ${index + 1} title`} value={item.title} onChange={event => updateContent('standards', homeContent.standards.map((entry, itemIndex) => itemIndex === index ? { ...entry, title: event.target.value } : entry))} placeholder="Card heading" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+              <textarea aria-label={`Detail card ${index + 1} description`} rows={2} value={item.copy} onChange={event => updateContent('standards', homeContent.standards.map((entry, itemIndex) => itemIndex === index ? { ...entry, copy: event.target.value } : entry))} placeholder="Card description" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+              <button type="button" onClick={() => updateContent('standards', homeContent.standards.filter((_, itemIndex) => itemIndex !== index))} className="justify-self-start text-sm font-medium text-red-700 hover:underline">Remove card</button>
+            </div>
+          ))}
+          <button type="button" onClick={() => updateContent('standards', [...homeContent.standards, { title: '', copy: '' }])} className="rounded-lg border border-emerald-800 px-3 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-50">Add detail card</button>
+        </section>
+
+        <section className="space-y-4 border-t border-gray-200 pt-6">
+          <div><h2 className="font-semibold text-gray-900">Homepage and About images</h2><p className="mt-1 text-sm text-gray-600">Change or remove the nature images on both pages.</p></div>
+          <label className="block space-y-2 text-sm font-semibold text-gray-900">Homepage story image
+            <input type="file" accept={acceptedTypes.join(',')} onChange={event => { void uploadStoryImage(event.target.files?.[0]); event.currentTarget.value = ''; }} className="block w-full font-normal text-gray-800 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:font-medium file:text-emerald-900" />
+          </label>
+          <input aria-label="Story image URL" value={homeContent.storyImageUrl.startsWith('data:') ? '' : homeContent.storyImageUrl} onChange={event => updateContent('storyImageUrl', event.target.value)} placeholder="HTTPS image URL, site path, or leave blank" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+          {homeContent.storyImageUrl && <div className="flex items-center gap-4"><Image src={homeContent.storyImageUrl} alt="Homepage story preview" width={160} height={100} unoptimized className="h-24 w-40 rounded-lg border object-cover" /><button type="button" onClick={() => updateContent('storyImageUrl', '')} className="text-sm font-medium text-red-700 hover:underline">Remove story image</button></div>}
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <label className="block space-y-2 text-sm font-semibold text-gray-900">About page image
+              <input type="file" accept={acceptedTypes.join(',')} onChange={event => { void uploadAboutImage(event.target.files?.[0]); event.currentTarget.value = ''; }} className="block w-full font-normal text-gray-800 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:font-medium file:text-emerald-900" />
+            </label>
+            <input aria-label="About page image URL" value={homeContent.aboutImageUrl.startsWith('data:') ? '' : homeContent.aboutImageUrl} onChange={event => updateContent('aboutImageUrl', event.target.value)} placeholder="HTTPS image URL, site path, or leave blank" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+            {homeContent.aboutImageUrl && <div className="flex items-center gap-4"><Image src={homeContent.aboutImageUrl} alt="About page image preview" width={160} height={100} unoptimized className="h-24 w-40 rounded-lg border object-cover" /><button type="button" onClick={() => updateContent('aboutImageUrl', '')} className="text-sm font-medium text-red-700 hover:underline">Remove About image</button></div>}
+          </div>
+          {([
+            ['storyEyebrow', 'Story eyebrow'], ['storyTitle', 'Story heading'], ['storyDescription', 'Story description'], ['storyLinkLabel', 'Story button'], ['newsletterEyebrow', 'Newsletter eyebrow'], ['newsletterTitle', 'Newsletter heading'], ['newsletterDescription', 'Newsletter description'], ['newsletterButtonLabel', 'Newsletter button'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="block space-y-1.5 text-sm font-medium text-gray-700">{label}
+              <textarea rows={2} value={homeContent[key]} onChange={event => updateContent(key, event.target.value)} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900" />
+            </label>
+          ))}
         </section>
 
         <button type="submit" disabled={saving} className="rounded-lg bg-emerald-800 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60">{saving ? 'Saving…' : 'Save branding'}</button>

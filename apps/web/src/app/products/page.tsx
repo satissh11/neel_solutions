@@ -8,7 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Input } from '@/components/ui/Input';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { StoreProduct } from '@/types/store';
+import { displayProductName, type StoreProduct } from '@/types/store';
 
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
@@ -31,20 +31,24 @@ export default function ProductsPage() {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return query ? products.filter(product => product.name.toLowerCase().includes(query) || product.description.toLowerCase().includes(query)) : products;
+    return query ? products.filter(product => displayProductName(product.name).toLowerCase().includes(query) || product.description.toLowerCase().includes(query)) : products;
   }, [search, products]);
 
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 bg-gray-50">
-        <div className="container mx-auto px-4 py-10 md:py-14">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">Shop wellness</p>
-          <h1 className="mb-2 text-3xl font-bold text-gray-950 md:text-4xl">All Products</h1>
-          <p className="mb-8 text-gray-600">Browse our full range of health products</p>
+        <section className="border-b border-[#e8ddca] bg-[#f0efe5] py-12 md:py-16">
+          <div className="container mx-auto px-4 md:px-8">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#78977d]">The Neel Solutions range</p>
+            <h1 className="mb-3 text-4xl tracking-[-0.035em] md:text-5xl">Shop products</h1>
+            <p className="max-w-2xl text-[#625f58]">Explore product details, availability, and pricing before you choose.</p>
+          </div>
+        </section>
+        <div className="container mx-auto px-4 py-9 md:px-8 md:py-12">
 
           {/* Search Bar */}
-          <div className="mb-8 max-w-lg rounded-2xl border border-white/80 bg-white/75 p-2 shadow-sm backdrop-blur-sm">
+          <div className="mb-8 max-w-lg rounded-2xl border border-[#e4d6bb] bg-[#fbf8f1] p-2 shadow-sm">
             <Input
               type="search"
               placeholder="Search products..."
@@ -66,7 +70,7 @@ export default function ProductsPage() {
                 <div key={product.id} className="motion-card group flex flex-col rounded-2xl border border-white/80 bg-white/95 p-4 shadow-md shadow-emerald-950/5 backdrop-blur-sm">
                   <div className="mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-lime-50 text-gray-500">
                     {product.images?.[0]?.url ? (
-                      <Image src={product.images[0].url} alt={product.name} width={500} height={500} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <Image src={product.images[0].url} alt={displayProductName(product.name)} width={500} height={500} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="flex flex-col items-center justify-center p-4 text-center">
                         <span className="text-4xl mb-2">🌿</span>
@@ -76,7 +80,7 @@ export default function ProductsPage() {
                   </div>
                   <span className="mb-1 text-xs font-semibold text-emerald-800">{product.category?.name}</span>
                   <h3 className="font-semibold text-gray-950 transition-colors group-hover:text-emerald-800">
-                    <Link href={`/products/${product.id}`}>{product.name}</Link>
+                    <Link href={`/products/${product.id}`}>{displayProductName(product.name)}</Link>
                   </h3>
                   <p className="mb-2 mt-1 line-clamp-2 text-sm text-gray-600">{product.description}</p>
                   <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-4">

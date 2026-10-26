@@ -59,12 +59,13 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     if (dbError) {
-      // If database is not reachable, allow the default admin credentials during preview!
-      const isDefaultAdmin = email === 'admin@neelsolutions.in' && validatedData.password === 'admin123';
+      // Keep the preview fallback configurable and out of source control.
+      const adminEmail = (process.env.ADMIN_EMAIL || 'admin@neelsolutions.in').toLowerCase();
+      const isDefaultAdmin = Boolean(process.env.ADMIN_PASSWORD) && email === adminEmail && validatedData.password === process.env.ADMIN_PASSWORD;
       if (isDefaultAdmin) {
         const demoAdmin = {
           id: 'admin-preview-user',
-          email: 'admin@neelsolutions.in',
+          email: adminEmail,
           name: 'Admin',
           role: 'ADMIN'
         };

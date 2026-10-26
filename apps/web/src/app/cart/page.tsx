@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
 import { useCart } from '@/context/CartContext';
+import { displayProductName } from '@/types/store';
 
 export default function CartPage() {
   const { items, removeItem, updateQty, totalPrice, clearCart } = useCart();
@@ -15,8 +16,9 @@ export default function CartPage() {
       <Header />
       <main className="flex-1 bg-gray-50">
         <div className="container mx-auto px-4 py-10 md:py-14">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">Almost yours</p>
-          <h1 className="mb-8 text-3xl font-bold text-gray-950 md:text-4xl">Your Cart</h1>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-800">Shopping bag</p>
+          <h1 className="mb-3 text-4xl tracking-[-0.035em] md:text-5xl">Your Cart</h1>
+          <p className="mb-8 text-gray-600">Review your items and delivery total before checkout.</p>
 
           {items.length === 0 ? (
             <div className="motion-card rounded-3xl border border-white/80 bg-white/90 py-20 text-center shadow-xl shadow-emerald-950/5 backdrop-blur-sm">
@@ -33,13 +35,13 @@ export default function CartPage() {
                   <div key={item.id} className="motion-card flex gap-4 rounded-2xl border border-white/80 bg-white/95 p-4 shadow-md shadow-emerald-950/5 backdrop-blur-sm">
                     <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-lime-50">
                       {item.image ? (
-                        <Image src={item.image} alt={item.name} width={96} height={96} unoptimized className="object-cover w-full h-full" />
+                        <Image src={item.image} alt={displayProductName(item.name)} width={96} height={96} unoptimized className="object-cover w-full h-full" />
                       ) : (
                         <span className="text-xs text-gray-400">No Img</span>
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                      <h3 className="font-semibold text-gray-900">{displayProductName(item.name)}</h3>
                       <p className="mt-1 font-bold text-emerald-900">₹{item.price.toFixed(2)}</p>
                       <div className="flex items-center gap-3 mt-2">
                         <div className="flex items-center border rounded-md overflow-hidden">

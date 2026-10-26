@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: 'apps/api/.env' });
 
 const prisma = new PrismaClient();
 
@@ -109,9 +112,9 @@ async function main() {
 
   // Seed Admin
   const adminEmail = (process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@neelsolutions.in')).toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'admin123');
-  if (process.env.NODE_ENV === 'production' && (!adminEmail || adminPassword.length < 12)) {
-    console.log('Skipping admin user seed in production (ADMIN_EMAIL/ADMIN_PASSWORD not set).');
+  const adminPassword = process.env.ADMIN_PASSWORD || '';
+  if (!adminEmail || adminPassword.length < 12) {
+    console.log('Skipping admin user seed (ADMIN_EMAIL/ADMIN_PASSWORD not set or password is too short).');
   } else {
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     await prisma.user.upsert({

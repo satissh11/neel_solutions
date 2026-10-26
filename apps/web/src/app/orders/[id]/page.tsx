@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/context/AuthContext';
-import type { StoreOrder } from '@/types/store';
+import { displayProductName, type StoreOrder } from '@/types/store';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Order Placed',
@@ -114,7 +114,7 @@ function OrderDetail() {
           <div className="space-y-3">
             {order.items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm text-gray-700">
-                <span>{item.productName} × {item.quantity}</span>
+                <span>{displayProductName(item.productName || item.product?.name || 'Product')} × {item.quantity}</span>
                 <span className="font-medium">₹{(Number(item.price) * item.quantity).toFixed(2)}</span>
               </div>
             ))}

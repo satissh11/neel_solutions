@@ -5,7 +5,7 @@ import { readApiResponse } from '@/lib/api-response';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { StoreProduct } from '@/types/store';
+import { displayProductName, type StoreProduct } from '@/types/store';
 
 export function ProductGrid() {
   const [products, setProducts] = useState<StoreProduct[]>([]);
@@ -44,7 +44,7 @@ export function ProductGrid() {
         <div key={product.id} className="motion-card group flex flex-col rounded-2xl border border-white/80 bg-white/95 p-4 shadow-md shadow-emerald-950/5 backdrop-blur-sm">
           <div className="mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-emerald-50 to-lime-50 text-gray-500">
             {product.images?.[0]?.url ? (
-              <Image src={product.images[0].url} alt={product.name} width={500} height={500} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <Image src={product.images[0].url} alt={displayProductName(product.name)} width={500} height={500} unoptimized className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
               <div className="flex flex-col items-center justify-center p-4 text-center">
                 <span className="text-4xl mb-2">🌿</span>
@@ -54,7 +54,7 @@ export function ProductGrid() {
           </div>
           <h3 className="font-semibold text-gray-950 transition-colors group-hover:text-emerald-800">
             <Link href={`/products/${product.id}`}>
-              {product.name}
+              {displayProductName(product.name)}
             </Link>
           </h3>
           <p className="text-gray-500 text-sm mt-1 mb-2 line-clamp-2">{product.description}</p>

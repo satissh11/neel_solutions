@@ -221,8 +221,8 @@ export const saveCoupon = async (req: Request, res: Response) => {
   }
 };
 
-const editableSettingKeys = ['logoUrl', 'heroImageUrl', 'heroImages'] as const;
-const defaultSiteSettings = { logoUrl: '', heroImageUrl: '', heroImages: '[]' };
+const editableSettingKeys = ['logoUrl', 'heroImageUrl', 'heroImages', 'homeContent'] as const;
+const defaultSiteSettings = { logoUrl: '', heroImageUrl: '', heroImages: '[]', homeContent: '{}' };
 
 const parseHeroImages = (value: string): string[] => {
   try {
@@ -233,12 +233,23 @@ const parseHeroImages = (value: string): string[] => {
   }
 };
 
+const parseHomeContent = (value: string): Record<string, unknown> => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
 export const getSiteSettings = async (req: Request, res: Response) => {
   try {
     const rows = await prisma.siteSetting.findMany({ where: { key: { in: [...editableSettingKeys] } } });
     const settings = { ...defaultSiteSettings, ...Object.fromEntries(rows.map(row => [row.key, row.value])) };
     const heroImages = parseHeroImages(rows.find(row => row.key === 'heroImages')?.value || settings.heroImageUrl);
-    res.json({ ...settings, heroImages, heroImageUrl: heroImages[0] || settings.heroImageUrl || '' });
+    res.json({ ...settings, heroImages, homeContent: parseHomeContent(settings.homeContent), heroImageUrl: heroImages[0] || settings.heroImageUrl || '' });
   } catch {
     res.status(500).json({ error: 'Failed to fetch site settings.' });
   }
@@ -250,10 +261,18 @@ export const getPublicSiteSettings = async (req: Request, res: Response) => {
     const settings = { ...defaultSiteSettings, ...Object.fromEntries(rows.map(row => [row.key, row.value])) };
     const heroImages = parseHeroImages(rows.find(row => row.key === 'heroImages')?.value || settings.heroImageUrl);
     const publicHeroImages = heroImages.map((image, index) => image.startsWith('data:image/') ? `/api/v1/settings/hero-image/${index}` : image);
+    const homeContent = parseHomeContent(settings.homeContent);
+    if (typeof homeContent.storyImageUrl === 'string' && homeContent.storyImageUrl.startsWith('data:image/')) {
+      homeContent.storyImageUrl = '/api/v1/settings/content-image/0';
+    }
+    if (typeof homeContent.aboutImageUrl === 'string' && homeContent.aboutImageUrl.startsWith('data:image/')) {
+      homeContent.aboutImageUrl = '/api/v1/settings/content-image/about';
+    }
     res.json({
       logoUrl: settings.logoUrl.startsWith('data:image/') ? '/api/v1/settings/logo' : settings.logoUrl,
       heroImages: publicHeroImages,
       heroImageUrl: publicHeroImages[0] || '',
+      homeContent,
     });
   } catch {
     res.json({
@@ -266,7 +285,7 @@ export const getPublicSiteSettings = async (req: Request, res: Response) => {
 
 export const getSiteBrandImage = async (req: Request, res: Response) => {
   const imageName = req.params.image;
-  if (imageName !== 'logo' && imageName !== 'hero-image') {
+  if (imageName !== 'logo' && imageName !== 'hero-image' && imageName !== 'content-image') {
     res.status(404).end();
     return;
   }
@@ -274,11 +293,17 @@ export const getSiteBrandImage = async (req: Request, res: Response) => {
     let value = '';
     if (imageName === 'logo') {
       value = (await prisma.siteSetting.findUnique({ where: { key: 'logoUrl' } }))?.value || '';
-    } else {
+    } else if (imageName === 'hero-image') {
       const setting = await prisma.siteSetting.findUnique({ where: { key: 'heroImages' } });
       const images = setting ? parseHeroImages(setting.value) : [];
       const index = Number(req.params.index ?? 0);
       value = images[index] || (!setting && index === 0 ? (await prisma.siteSetting.findUnique({ where: { key: 'heroImageUrl' } }))?.value || '' : '');
+    } else {
+      const setting = await prisma.siteSetting.findUnique({ where: { key: 'homeContent' } });
+      const content = parseHomeContent(setting?.value || '{}');
+      value = req.params.index === 'about'
+        ? (typeof content.aboutImageUrl === 'string' ? content.aboutImageUrl : '')
+        : (typeof content.storyImageUrl === 'string' ? content.storyImageUrl : '');
     }
     const image = parseUploadedImage(value);
     if (!image) {
@@ -296,12 +321,32 @@ export const saveSiteSettings = async (req: Request, res: Response) => {
   try {
     const { logoUrl } = req.body;
     const heroImages: unknown = Array.isArray(req.body.heroImages) ? req.body.heroImages : req.body.heroImageUrl ? [req.body.heroImageUrl] : [];
-    if (typeof logoUrl !== 'string' || !Array.isArray(heroImages) || heroImages.length > 6 || !heroImages.every(image => typeof image === 'string')) {
+    const homeContent = req.body.homeContent;
+    if (typeof logoUrl !== 'string' || !Array.isArray(heroImages) || heroImages.length > 6 || !heroImages.every(image => typeof image === 'string') ||
+        !homeContent || typeof homeContent !== 'object' || Array.isArray(homeContent) || JSON.stringify(homeContent).length > 12 * 1024 * 1024) {
       return res.status(400).json({ error: 'Provide a logo and up to six homepage images.' });
     }
-    const entries = [['logoUrl', logoUrl], ['heroImageUrl', heroImages[0] || ''], ['heroImages', JSON.stringify(heroImages)]] as const;
+    const homeTextFields = ['heroEyebrow', 'heroTitle', 'heroDescription', 'heroPrimaryLabel', 'heroSecondaryLabel', 'highlightsEyebrow', 'highlightsTitle', 'highlightsDescription', 'ingredientsEyebrow', 'ingredientsTitle', 'reviewEyebrow', 'reviewTitle', 'reviewDescription', 'reviewFormTitle', 'reviewFormDescription', 'standardsEyebrow', 'standardsTitle', 'storyEyebrow', 'storyTitle', 'storyDescription', 'storyLinkLabel', 'newsletterEyebrow', 'newsletterTitle', 'newsletterDescription', 'newsletterButtonLabel'];
+    if (!Array.isArray(homeContent.trustItems) || homeContent.trustItems.length > 20 || !homeContent.trustItems.every((item: unknown) => typeof item === 'string') ||
+        !homeTextFields.every(key => typeof homeContent[key] === 'string') ||
+        typeof homeContent.storyImageUrl !== 'string' ||
+        typeof homeContent.aboutImageUrl !== 'string' ||
+        !Array.isArray(homeContent.ingredients) || homeContent.ingredients.length > 40 || !homeContent.ingredients.every((item: unknown) => isRecord(item) && typeof item.name === 'string' && typeof item.note === 'string') ||
+        !Array.isArray(homeContent.wellnessQuotes) || homeContent.wellnessQuotes.length > 20 || !homeContent.wellnessQuotes.every((item: unknown) => typeof item === 'string') ||
+        !Array.isArray(homeContent.standards) || homeContent.standards.length > 12 || !homeContent.standards.every((item: unknown) => isRecord(item) && typeof item.title === 'string' && typeof item.copy === 'string')) {
+      return res.status(400).json({ error: 'Homepage text, ingredients, quotes, or detail cards are invalid.' });
+    }
+    const storyImage = homeContent.storyImageUrl as string;
+    if (storyImage && (storyImage.startsWith('data:') ? !parseUploadedImage(storyImage) : storyImage.length > 2048 || !/^(https:\/\/[^\s]+|\/(?!\/)[^\s]*)$/i.test(storyImage))) {
+      return res.status(400).json({ error: 'Story image must be a supported upload, HTTPS URL, site path, or blank.' });
+    }
+    const aboutImage = homeContent.aboutImageUrl as string;
+    if (aboutImage && (aboutImage.startsWith('data:') ? !parseUploadedImage(aboutImage) : aboutImage.length > 2048 || !/^(https:\/\/[^\s]+|\/(?!\/)[^\s]*)$/i.test(aboutImage))) {
+      return res.status(400).json({ error: 'About image must be a supported upload, HTTPS URL, site path, or blank.' });
+    }
+    const entries = [['logoUrl', logoUrl], ['heroImageUrl', heroImages[0] || ''], ['heroImages', JSON.stringify(heroImages)], ['homeContent', JSON.stringify(homeContent)]] as const;
     for (const [key, value] of entries) {
-      if (key === 'heroImages') continue;
+      if (key === 'heroImages' || key === 'homeContent') continue;
       if (typeof value !== 'string') return res.status(400).json({ error: `Invalid image value for ${key}.` });
       if (key === 'heroImageUrl' && value !== (heroImages[0] || '')) continue;
       if (!value) continue;
@@ -320,7 +365,7 @@ export const saveSiteSettings = async (req: Request, res: Response) => {
     await prisma.$transaction(entries.map(([key, value]) => prisma.siteSetting.upsert({
       where: { key }, create: { key, value }, update: { value },
     })));
-    res.json({ logoUrl, heroImages });
+    res.json({ logoUrl, heroImages, homeContent });
   } catch {
     res.status(500).json({ error: 'Failed to save site settings.' });
   }

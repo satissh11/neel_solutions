@@ -2,6 +2,11 @@ export interface StoreProduct {
   id: string; name: string; description: string; price: number | string; stock: number;
   sku?: string; category?: { id?: string; name: string } | null; images?: { url: string }[];
 }
+
+export function displayProductName(name: string): string {
+  return name.trim() === 'NEW_PRODUCT_NAME' ? 'Moringa' : name;
+}
+
 export interface StoreOrderItem {
   id: string; productId?: string; productName?: string; product?: { name: string };
   price: number | string; quantity: number;

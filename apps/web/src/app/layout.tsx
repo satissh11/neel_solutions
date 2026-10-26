@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { SiteSettingsProvider } from "@/context/SiteSettingsContext";
-import { SiteIntro } from "@/components/SiteIntro";
+import { ScrollRevealObserver } from "@/components/ScrollRevealObserver";
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
@@ -18,7 +18,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AuthProvider>
           <SiteSettingsProvider>
             <CartProvider>
-              <SiteIntro>{children}</SiteIntro>
+              {children}
+              <ScrollRevealObserver />
             </CartProvider>
           </SiteSettingsProvider>
         </AuthProvider>
