@@ -1,4 +1,4 @@
-CREATE TABLE `OrderReturn` (
+CREATE TABLE IF NOT EXISTS `OrderReturn` (
   `id` VARCHAR(191) NOT NULL,
   `orderId` VARCHAR(191) NOT NULL,
   `reason` VARCHAR(120) NOT NULL,

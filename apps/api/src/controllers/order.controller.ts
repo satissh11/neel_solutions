@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import { prisma } from '../lib/prisma';
+import { ensureReturnsTable, loadReturnsFor } from '../lib/extra-tables';
 import { INDIA_WIDE_SHIPPING, isValidIndianPin } from '../lib/shipping';
 
 const RETURN_WINDOW_DAYS = 7;
@@ -161,29 +163,36 @@ export const placeOrder = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getMyOrders = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
-  const userId = req.user.userId;
-  const baseInclude = {
-    items: { include: { product: { select: { name: true } } } },
-    statusUpdates: { orderBy: { createdAt: 'asc' as const } },
-  };
+// Attach return requests (stored with plain SQL) to orders. If the return data cannot be
+// read, orders are still returned, just without return information.
+const withReturns = async <T extends { id: string; status: string; updatedAt: Date; statusUpdates?: { status: string; createdAt: Date }[] }>(orders: T[]) => {
+  let returns = new Map<string, any>();
+  let returnDataLoaded = true;
   try {
-    let returnDataLoaded = true;
-    let orders: any[];
-    try {
-      orders = await prisma.order.findMany({
-        where: { userId },
-        include: { ...baseInclude, returnRequest: true },
-        orderBy: { createdAt: 'desc' },
-      });
-    } catch (returnError: any) {
-      // Keep orders working even if the OrderReturn table or client is not ready yet.
-      console.error('[Orders] Loading return requests failed, retrying without them:', returnError?.message);
-      returnDataLoaded = false;
-      orders = await prisma.order.findMany({ where: { userId }, include: baseInclude, orderBy: { createdAt: 'desc' } });
-    }
-    res.json(orders.map(order => ({ ...order, ...getReturnInfo(order, returnDataLoaded) })));
+    returns = await loadReturnsFor(orders.map(order => order.id));
+  } catch (error: any) {
+    console.error('[Orders] Could not load return requests:', error?.message);
+    returnDataLoaded = false;
+  }
+  return orders.map(order => {
+    const returnRequest = returns.get(order.id) ?? null;
+    return { ...order, returnRequest, ...getReturnInfo({ ...order, returnRequest }, returnDataLoaded) };
+  });
+};
+
+export const getMyOrders = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // @ts-ignore
+    const userId = req.user.userId;
+    const orders = await prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: { include: { product: { select: { name: true } } } },
+        statusUpdates: { orderBy: { createdAt: 'asc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(await withReturns(orders));
   } catch (error: any) {
     console.error('[Orders] Failed to fetch orders:', error?.message);
     res.status(500).json({ error: 'Failed to fetch orders.' });
@@ -194,22 +203,17 @@ export const getOrderById = async (req: Request, res: Response): Promise<void> =
   try {
     // @ts-ignore
     const userId = req.user.userId;
-    const baseInclude = { items: true, statusUpdates: { orderBy: { createdAt: 'asc' as const } } };
-    let returnDataLoaded = true;
-    let order: any;
-    try {
-      order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { ...baseInclude, returnRequest: true } });
-    } catch (returnError: any) {
-      console.error('[Orders] Loading return request failed, retrying without it:', returnError?.message);
-      returnDataLoaded = false;
-      order = await prisma.order.findUnique({ where: { id: req.params.id }, include: baseInclude });
-    }
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { items: true, statusUpdates: { orderBy: { createdAt: 'asc' } } },
+    });
 
     if (!order) { res.status(404).json({ error: 'Order not found.' }); return; }
     // Prevent customers from accessing other customers' orders
     if (order.userId !== userId) { res.status(403).json({ error: 'Forbidden.' }); return; }
 
-    res.json({ ...order, ...getReturnInfo(order, returnDataLoaded) });
+    const [withReturn] = await withReturns([order]);
+    res.json(withReturn);
   } catch (error: any) {
     console.error('[Orders] Failed to fetch order:', error?.message);
     res.status(500).json({ error: 'Failed to fetch order.' });
@@ -229,7 +233,7 @@ export const requestReturn = async (req: Request, res: Response): Promise<void> 
 
     const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      include: { statusUpdates: { orderBy: { createdAt: 'asc' } }, returnRequest: true },
+      include: { statusUpdates: { orderBy: { createdAt: 'asc' } } },
     });
     if (!order) { res.status(404).json({ error: 'Order not found.' }); return; }
     if (order.userId !== userId) { res.status(403).json({ error: 'Forbidden.' }); return; }
@@ -237,19 +241,23 @@ export const requestReturn = async (req: Request, res: Response): Promise<void> 
       res.status(400).json({ error: 'Returns can only be requested after the order is delivered.' });
       return;
     }
-    if (order.returnRequest) {
+
+    await ensureReturnsTable();
+    const existing = await loadReturnsFor([order.id]);
+    if (existing.has(order.id)) {
       res.status(400).json({ error: 'A return has already been requested for this order.' });
       return;
     }
-    if (!getReturnInfo(order).returnEligible) {
+    if (!getReturnInfo({ ...order, returnRequest: null }).returnEligible) {
       res.status(400).json({ error: `The ${RETURN_WINDOW_DAYS}-day return window for this order has ended.` });
       return;
     }
 
-    const returnRequest = await prisma.orderReturn.create({
-      data: { orderId: order.id, reason, details: details || null },
-    });
-    res.status(201).json({ returnRequest, message: 'Return request submitted. We will review it and get back to you.' });
+    await prisma.$executeRawUnsafe(
+      "INSERT INTO `OrderReturn` (id, orderId, reason, details, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, 'REQUESTED', NOW(3), NOW(3))",
+      crypto.randomUUID(), order.id, reason, details || null,
+    );
+    res.status(201).json({ message: 'Return request submitted. We will review it and get back to you.' });
   } catch (error: any) {
     console.error('[Orders] Could not submit return request:', error?.message);
     res.status(500).json({ error: 'Could not submit the return request.' });

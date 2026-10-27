@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import crypto from 'node:crypto';
 import { prisma } from '../lib/prisma';
+import { ensureReviewsTable } from '../lib/extra-tables';
 
 const MAX_REVIEWS_PER_HOUR = 5;
 const recentSubmissions = new Map<string, number[]>();
@@ -19,16 +21,16 @@ const tooManyRecent = (key: string) => {
   return false;
 };
 
+interface ReviewRow { id: string; name: string; email: string; product: string | null; rating: number; text: string; status: string; createdAt: Date }
+
 // Public: approved reviews shown on the homepage. Email addresses are never returned.
 export const getApprovedReviews = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const reviews = await prisma.review.findMany({
-      where: { status: 'APPROVED' },
-      orderBy: { createdAt: 'desc' },
-      take: 12,
-      select: { id: true, name: true, product: true, rating: true, text: true, createdAt: true },
-    });
-    res.json(reviews);
+    await ensureReviewsTable();
+    const reviews = await prisma.$queryRawUnsafe(
+      "SELECT id, name, product, rating, text, createdAt FROM `Review` WHERE status = 'APPROVED' ORDER BY createdAt DESC LIMIT 12",
+    ) as ReviewRow[];
+    res.json(reviews.map(review => ({ ...review, rating: Number(review.rating) })));
   } catch (error: any) {
     console.error('[Reviews] Failed to load approved reviews:', error?.message);
     res.json([]);
@@ -56,7 +58,11 @@ export const submitReview = async (req: Request, res: Response): Promise<void> =
       res.status(429).json({ error: 'Too many reviews from this connection. Please try again later.' });
       return;
     }
-    await prisma.review.create({ data: { name, email, product: product || null, rating, text } });
+    await ensureReviewsTable();
+    await prisma.$executeRawUnsafe(
+      "INSERT INTO `Review` (id, name, email, product, rating, text, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', NOW(3), NOW(3))",
+      crypto.randomUUID(), name, email, product || null, rating, text,
+    );
     res.status(201).json({ message: 'Thank you! Your review will appear after approval.' });
   } catch (error: any) {
     console.error('[Reviews] Failed to save review:', error?.message);
@@ -66,11 +72,14 @@ export const submitReview = async (req: Request, res: Response): Promise<void> =
 
 export const getAdminReviews = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const reviews = await prisma.review.findMany({ orderBy: { createdAt: 'desc' }, take: 200 });
-    res.json(reviews);
+    await ensureReviewsTable();
+    const reviews = await prisma.$queryRawUnsafe(
+      'SELECT id, name, email, product, rating, text, status, createdAt FROM `Review` ORDER BY createdAt DESC LIMIT 200',
+    ) as ReviewRow[];
+    res.json(reviews.map(review => ({ ...review, rating: Number(review.rating) })));
   } catch (error: any) {
     console.error('[Reviews] Admin list failed:', error?.message);
-    res.status(500).json({ error: 'Failed to fetch reviews' });
+    res.status(500).json({ error: `Failed to fetch reviews (${error?.message?.split('\n').pop()?.slice(0, 160) || 'database error'})` });
   }
 };
 
@@ -81,8 +90,10 @@ export const updateReviewStatus = async (req: Request, res: Response): Promise<v
       res.status(400).json({ error: 'Invalid review status.' });
       return;
     }
-    const review = await prisma.review.update({ where: { id: req.params.id }, data: { status } });
-    res.json(review);
+    await ensureReviewsTable();
+    const changed = await prisma.$executeRawUnsafe('UPDATE `Review` SET status = ?, updatedAt = NOW(3) WHERE id = ?', status, req.params.id);
+    if (!changed) { res.status(404).json({ error: 'Review not found.' }); return; }
+    res.json({ id: req.params.id, status });
   } catch (error: any) {
     console.error('[Reviews] Status update failed:', error?.message);
     res.status(500).json({ error: 'Could not update the review.' });
@@ -91,7 +102,8 @@ export const updateReviewStatus = async (req: Request, res: Response): Promise<v
 
 export const deleteReview = async (req: Request, res: Response): Promise<void> => {
   try {
-    await prisma.review.delete({ where: { id: req.params.id } });
+    await ensureReviewsTable();
+    await prisma.$executeRawUnsafe('DELETE FROM `Review` WHERE id = ?', req.params.id);
     res.json({ message: 'Review deleted.' });
   } catch (error: any) {
     console.error('[Reviews] Delete failed:', error?.message);

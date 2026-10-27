@@ -176,7 +176,7 @@ function OrderDetail() {
         </div>
 
         {(order.returnRequest || order.returnEligible) && (
-          <section className="border-t pt-4">
+          <section id="return" className="border-t pt-4">
             <h3 className="mb-2 font-semibold text-gray-800">Return</h3>
             {order.returnRequest ? (
               <div className="rounded-xl bg-gray-50 p-3 text-sm text-gray-800">
