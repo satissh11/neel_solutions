@@ -123,6 +123,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
+            <p className="text-center text-sm"><Link href="/forgot-password" className="font-medium text-emerald-800 hover:underline">Forgot your password?</Link></p>
           </form>
           <div className="my-5 flex items-center gap-3 text-xs text-gray-500"><span className="h-px flex-1 bg-gray-200" />OR<span className="h-px flex-1 bg-gray-200" /></div>
           <GoogleSignInButton onCredential={handleGoogleCredential} onError={setError} />

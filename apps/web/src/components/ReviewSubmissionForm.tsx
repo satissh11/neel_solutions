@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { API_BASE_URL } from "@/lib/api";
 
 const FORMSPREE_URL = "https://formspree.io/f/xoeeebvk";
 
 export function ReviewSubmissionForm({ title, description }: { title: string; description: string }) {
-  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "emailed" | "error">("idle");
 
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -15,15 +16,22 @@ export function ReviewSubmissionForm({ title, description }: { title: string; de
     setStatus("sending");
 
     try {
-      const response = await fetch(FORMSPREE_URL, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: form,
-      });
+      // Save the review for the website (shown after admin approval) and also email it to the team.
+      const payload = Object.fromEntries(form.entries());
+      const [saved, emailed] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/api/v1/reviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+        fetch(FORMSPREE_URL, { method: "POST", headers: { Accept: "application/json" }, body: form }),
+      ]);
+      const savedOk = saved.status === "fulfilled" && saved.value.ok;
+      const emailedOk = emailed.status === "fulfilled" && emailed.value.ok;
 
-      if (response.ok) {
+      if (savedOk || emailedOk) {
         formElement.reset();
-        setStatus("success");
+        setStatus(savedOk ? "success" : "emailed");
       } else {
         setStatus("error");
       }
@@ -65,7 +73,8 @@ export function ReviewSubmissionForm({ title, description }: { title: string; de
           {status === "sending" ? "Sending..." : "Send your review"}
         </button>
         <div aria-live="polite" className="text-sm sm:col-span-2">
-          {status === "success" && <p className="text-[#3f6b4a]">Thank you! Your review has been sent.</p>}
+          {status === "success" && <p className="text-[#3f6b4a]">Thank you! Your review has been received and will appear on the site after approval.</p>}
+          {status === "emailed" && <p className="text-[#3f6b4a]">Thank you! Your review has been sent to our team.</p>}
           {status === "error" && <p className="text-[#a23b3b]">Sorry, something went wrong. Please try again in a moment.</p>}
         </div>
       </form>

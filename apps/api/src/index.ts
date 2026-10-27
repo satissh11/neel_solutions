@@ -25,6 +25,7 @@ import orderRoutes from './routes/order.routes';
 import checkoutRoutes from './routes/checkout.routes';
 import adminRoutes from './routes/admin.routes';
 import settingsRoutes from './routes/settings.routes';
+import reviewRoutes from './routes/review.routes';
 import whatsappWebhookRoutes from './routes/whatsapp-webhook.routes';
 
 const handleHealthCheck = async (_req: express.Request, res: express.Response) => {
@@ -56,6 +57,7 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/reviews', reviewRoutes);
 app.use('/webhook', whatsappWebhookRoutes);
 
 import crypto from 'node:crypto';

@@ -13,6 +13,7 @@ import {
   saveSiteSettings,
   getSiteSettings,
 } from '../controllers/admin.controller';
+import { getAdminReviews, updateReviewStatus, deleteReview } from '../controllers/review.controller';
 import { requireAuth, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -23,6 +24,9 @@ router.get('/stats', getDashboardStats);
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
 router.put('/orders/:id/return', updateReturnRequest);
+router.get('/reviews', getAdminReviews);
+router.put('/reviews/:id', updateReviewStatus);
+router.delete('/reviews/:id', deleteReview);
 router.get('/products', getAdminProducts);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);
