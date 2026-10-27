@@ -49,6 +49,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/orders" className={`block rounded-lg px-4 py-2.5 transition-colors ${pathname === '/admin/orders' ? 'bg-emerald-700 shadow-sm' : 'hover:bg-white/10'}`}>
             Orders
           </Link>
+          <Link href="/admin/reviews" className={`block rounded-lg px-4 py-2.5 transition-colors ${pathname === '/admin/reviews' ? 'bg-emerald-700 shadow-sm' : 'hover:bg-white/10'}`}>
+            Reviews
+          </Link>
           <Link href="/admin/products" className={`block rounded-lg px-4 py-2.5 transition-colors ${pathname === '/admin/products' ? 'bg-emerald-700 shadow-sm' : 'hover:bg-white/10'}`}>
             Products
           </Link>
@@ -70,7 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex min-w-0 flex-1 flex-col">
         <nav aria-label="Admin navigation" className="sticky top-0 z-20 flex gap-1 overflow-x-auto border-b border-emerald-950 bg-[#12382f] px-2 py-2 text-sm text-white shadow-md md:hidden">
           {[
-            ['/admin', 'Overview'], ['/admin/orders', 'Orders'], ['/admin/products', 'Products'],
+            ['/admin', 'Overview'], ['/admin/orders', 'Orders'], ['/admin/reviews', 'Reviews'], ['/admin/products', 'Products'],
             ['/admin/coupons', 'Discounts'], ['/admin/settings', 'Branding'],
           ].map(([href, label]) => (
             <Link key={href} href={href} className={`whitespace-nowrap rounded-md px-3 py-2 ${pathname === href ? 'bg-emerald-700 font-semibold' : 'text-gray-200 hover:bg-white/10'}`}>

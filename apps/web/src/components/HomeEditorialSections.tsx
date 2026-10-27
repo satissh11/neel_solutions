@@ -1,13 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { API_BASE_URL } from "@/lib/api";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { ReviewSubmissionForm } from "@/components/ReviewSubmissionForm";
 
 const FORMSPREE_URL = "https://formspree.io/f/xoeeebvk";
+
+interface PublicReview { id: string; name: string; product: string | null; rating: number; text: string; createdAt: string }
+
+function ApprovedReviews() {
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_BASE_URL}/api/v1/reviews`)
+      .then(response => (response.ok ? response.json() : []))
+      .then(data => { if (active && Array.isArray(data)) setReviews(data); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  if (!reviews.length) return null;
+
+  return (
+    <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {reviews.map((review) => (
+        <article key={review.id} className="rounded-[1.4rem] border border-[#e4d6bb] bg-[#faf8f2] p-5">
+          <p className="mb-2 text-[#c9a227]" aria-label={`${review.rating} out of 5 stars`}>{"★".repeat(review.rating)}<span className="text-[#d9d2bf]">{"★".repeat(5 - review.rating)}</span></p>
+          <p className="mb-4 whitespace-pre-line text-sm leading-6 text-[#49463f]">{review.text}</p>
+          <p className="text-sm font-semibold text-[#17151a]">{review.name}</p>
+          {review.product && <p className="text-xs text-[#78977d]">{review.product}</p>}
+        </article>
+      ))}
+    </div>
+  );
+}
 
 function NewsletterForm({ buttonLabel }: { buttonLabel: string }) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
@@ -70,6 +101,7 @@ export function HomeEditorialSections() {
             </div>
             <div className="scroll-reveal"><ReviewSubmissionForm title={homeContent.reviewFormTitle} description={homeContent.reviewFormDescription} /></div>
           </div>
+          <ApprovedReviews />
         </div>
       </section>
 

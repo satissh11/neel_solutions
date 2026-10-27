@@ -32,16 +32,22 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 };
 
 export const getAllOrders = async (req: Request, res: Response) => {
+  const include = {
+    user: { select: { name: true, email: true } }, items: true,
+    whatsappMessages: { orderBy: { createdAt: 'desc' as const }, select: { id: true, templateName: true, state: true, attempts: true, lastErrorCode: true, lastErrorMessage: true, createdAt: true, sentAt: true, deliveredAt: true, readAt: true } },
+  };
   try {
-    const orders = await prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: { select: { name: true, email: true } }, items: true, returnRequest: true,
-        whatsappMessages: { orderBy: { createdAt: 'desc' }, select: { id: true, templateName: true, state: true, attempts: true, lastErrorCode: true, lastErrorMessage: true, createdAt: true, sentAt: true, deliveredAt: true, readAt: true } },
-      }
-    });
+    let orders;
+    try {
+      orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, include: { ...include, returnRequest: true } });
+    } catch (returnError: any) {
+      // Keep the order list working even if the OrderReturn table or client is not ready yet.
+      console.error('[Admin] Loading return requests failed, retrying without them:', returnError?.message);
+      orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, include });
+    }
     res.json(orders);
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[Admin] Failed to fetch orders:', error?.message);
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
