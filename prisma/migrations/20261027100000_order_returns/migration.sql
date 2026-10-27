@@ -1,0 +1,13 @@
+CREATE TABLE `OrderReturn` (
+  `id` VARCHAR(191) NOT NULL,
+  `orderId` VARCHAR(191) NOT NULL,
+  `reason` VARCHAR(120) NOT NULL,
+  `details` VARCHAR(1000) NULL,
+  `status` ENUM('REQUESTED', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'REQUESTED',
+  `adminNote` VARCHAR(500) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  UNIQUE INDEX `OrderReturn_orderId_key`(`orderId`),
+  PRIMARY KEY (`id`),
+  CONSTRAINT `OrderReturn_orderId_fkey` FOREIGN KEY (`orderId`) REFERENCES `Order`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

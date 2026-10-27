@@ -36,13 +36,37 @@ export const getAllOrders = async (req: Request, res: Response) => {
     const orders = await prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        user: { select: { name: true, email: true } }, items: true,
+        user: { select: { name: true, email: true } }, items: true, returnRequest: true,
         whatsappMessages: { orderBy: { createdAt: 'desc' }, select: { id: true, templateName: true, state: true, attempts: true, lastErrorCode: true, lastErrorMessage: true, createdAt: true, sentAt: true, deliveredAt: true, readAt: true } },
       }
     });
     res.json(orders);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+};
+
+export const updateReturnRequest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const adminNote = typeof req.body.adminNote === 'string' ? req.body.adminNote.trim().slice(0, 500) : '';
+    if (status !== 'APPROVED' && status !== 'REJECTED') {
+      res.status(400).json({ error: 'Return status must be APPROVED or REJECTED.' });
+      return;
+    }
+    const existing = await prisma.orderReturn.findUnique({ where: { orderId: id } });
+    if (!existing) {
+      res.status(404).json({ error: 'No return request found for this order.' });
+      return;
+    }
+    const returnRequest = await prisma.orderReturn.update({
+      where: { orderId: id },
+      data: { status, adminNote: adminNote || null },
+    });
+    res.json({ returnRequest });
+  } catch {
+    res.status(500).json({ error: 'Could not update the return request.' });
   }
 };
 

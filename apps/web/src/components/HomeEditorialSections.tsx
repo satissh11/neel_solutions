@@ -1,9 +1,59 @@
 "use client";
 
+import { useState } from "react";
+import type { FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSiteSettings } from "@/context/SiteSettingsContext";
 import { ReviewSubmissionForm } from "@/components/ReviewSubmissionForm";
+
+const FORMSPREE_URL = "https://formspree.io/f/xoeeebvk";
+
+function NewsletterForm({ buttonLabel }: { buttonLabel: string }) {
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+
+  async function subscribe(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setStatus("sending");
+
+    try {
+      const response = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: form,
+      });
+
+      if (response.ok) {
+        formElement.reset();
+        setStatus("success");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  return (
+    <div className="scroll-reveal w-full max-w-xl md:min-w-[440px]">
+      <form onSubmit={subscribe} className="flex w-full flex-col gap-3 sm:flex-row">
+        <input type="hidden" name="_subject" value="New newsletter subscriber - Neel Solutions" />
+        <input type="text" name="_gotcha" tabIndex={-1} autoComplete="off" style={{ display: "none" }} />
+        <label className="sr-only" htmlFor="newsletter-email">Email address</label>
+        <input id="newsletter-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required className="min-h-12 min-w-0 flex-1 rounded-full border border-[#ddd3bf] bg-white px-5 text-sm text-[#29272d] outline-none focus:border-[#91a993]" />
+        <button type="submit" disabled={status === "sending"} className="min-h-12 rounded-full bg-[#789b80] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#62866b] disabled:opacity-60">
+          {status === "sending" ? "Sending..." : buttonLabel}
+        </button>
+      </form>
+      <div aria-live="polite" className="mt-3 text-sm">
+        {status === "success" && <p className="text-[#3f6b4a]">Thank you! You are subscribed.</p>}
+        {status === "error" && <p className="text-[#a23b3b]">Sorry, something went wrong. Please try again in a moment.</p>}
+      </div>
+    </div>
+  );
+}
 
 export function HomeEditorialSections() {
   const { homeContent } = useSiteSettings();
@@ -60,11 +110,7 @@ export function HomeEditorialSections() {
             <h2 className="mb-2 text-3xl font-normal tracking-[-0.025em] text-[#17151a] md:text-4xl">{homeContent.newsletterTitle}</h2>
             <p className="max-w-xl leading-6 text-[#625f58]">{homeContent.newsletterDescription}</p>
           </div>
-          <form action="mailto:neelengineering2022@gmail.com" method="get" encType="text/plain" className="scroll-reveal flex w-full max-w-xl flex-col gap-3 sm:flex-row md:min-w-[440px]">
-            <label className="sr-only" htmlFor="newsletter-email">Email address</label>
-            <input id="newsletter-email" name="email" type="email" placeholder="you@example.com" required className="min-h-12 min-w-0 flex-1 rounded-full border border-[#ddd3bf] bg-white px-5 text-sm text-[#29272d] outline-none focus:border-[#91a993]" />
-            <button type="submit" className="min-h-12 rounded-full bg-[#789b80] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#62866b]">{homeContent.newsletterButtonLabel}</button>
-          </form>
+          <NewsletterForm buttonLabel={homeContent.newsletterButtonLabel} />
         </div>
       </section>
     </>

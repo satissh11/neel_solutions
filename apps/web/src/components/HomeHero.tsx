@@ -13,16 +13,19 @@ export function HomeHero() {
     if (heroImages.length < 2) return;
     const timer = window.setInterval(() => {
       setActiveSlide(current => (current + 1) % heroImages.length);
-    }, 3000);
+    }, 7000);
     return () => window.clearInterval(timer);
   }, [heroImages.length]);
 
   const currentSlide = heroImages.length ? activeSlide % heroImages.length : 0;
-  const activeImage = heroImages[currentSlide];
 
   return (
     <section className="home-hero relative isolate flex min-h-[560px] items-center overflow-hidden py-20 md:min-h-[650px] md:py-24">
-      <Image key={activeImage || 'nature'} src={activeImage || '/admin-nature.svg'} alt="" aria-hidden="true" fill unoptimized loading="eager" className="hero-slide-enter -z-20 object-cover" />
+      {heroImages.length ? heroImages.map((image, index) => (
+        <Image key={`${index}-${image.slice(0, 24)}`} src={image} alt="" aria-hidden="true" fill unoptimized loading="eager" className={`hero-slide-layer -z-20 object-cover ${currentSlide === index ? 'opacity-100' : 'opacity-0'}`} />
+      )) : (
+        <Image src="/admin-nature.svg" alt="" aria-hidden="true" fill unoptimized loading="eager" className="-z-20 object-cover" />
+      )}
       <div aria-hidden="true" className="home-hero-wash absolute inset-0 -z-10" />
       <div className="container relative z-10 mx-auto px-6 md:px-10">
         <div className="max-w-3xl">

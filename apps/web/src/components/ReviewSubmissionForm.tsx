@@ -1,22 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import type { FormEvent } from "react";
 
-export function ReviewSubmissionForm({ title, description }: { title: string; description: string }) {
-  function submitReview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const subject = `Customer review: ${String(form.get("rating"))} stars`;
-    const body = [
-      `Name: ${String(form.get("name"))}`,
-      `Email: ${String(form.get("email"))}`,
-      `Product: ${String(form.get("product") || "Not specified")}`,
-      `Rating: ${String(form.get("rating"))} / 5`,
-      "",
-      String(form.get("review")),
-    ].join("\n");
+const FORMSPREE_URL = "https://formspree.io/f/xoeeebvk";
 
-    window.location.href = `mailto:neelengineering2022@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+export function ReviewSubmissionForm({ title, description }: { title: string; description: string }) {
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+
+  async function submitReview(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    setStatus("sending");
+
+    try {
+      const response = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: form,
+      });
+
+      if (response.ok) {
+        formElement.reset();
+        setStatus("success");
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
   }
 
   return (
@@ -24,6 +37,8 @@ export function ReviewSubmissionForm({ title, description }: { title: string; de
       <h3 className="mb-2 font-serif text-2xl text-[#17151a]">{title}</h3>
       <p className="mb-5 text-sm leading-6 text-[#625f58]">{description}</p>
       <form onSubmit={submitReview} className="grid gap-4 sm:grid-cols-2">
+        <input type="hidden" name="_subject" value="New customer review - Neel Solutions" />
+        <input type="text" name="_gotcha" tabIndex={-1} autoComplete="off" style={{ display: "none" }} />
         <div>
           <label htmlFor="review-name" className="mb-1.5 block text-sm text-[#49463f]">Your name</label>
           <input id="review-name" name="name" autoComplete="name" required className="min-h-11 w-full rounded-xl border border-[#ddd3bf] bg-white px-3 text-sm text-[#29272d] outline-none focus:border-[#91a993]" />
@@ -46,7 +61,13 @@ export function ReviewSubmissionForm({ title, description }: { title: string; de
           <label htmlFor="review-text" className="mb-1.5 block text-sm text-[#49463f]">Your review</label>
           <textarea id="review-text" name="review" required rows={4} className="w-full rounded-xl border border-[#ddd3bf] bg-white px-3 py-2.5 text-sm text-[#29272d] outline-none focus:border-[#91a993]" />
         </div>
-        <button type="submit" className="min-h-12 rounded-full bg-[#789b80] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#62866b] sm:col-span-2 sm:justify-self-start">Send your review</button>
+        <button type="submit" disabled={status === "sending"} className="min-h-12 rounded-full bg-[#789b80] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#62866b] disabled:opacity-60 sm:col-span-2 sm:justify-self-start">
+          {status === "sending" ? "Sending..." : "Send your review"}
+        </button>
+        <div aria-live="polite" className="text-sm sm:col-span-2">
+          {status === "success" && <p className="text-[#3f6b4a]">Thank you! Your review has been sent.</p>}
+          {status === "error" && <p className="text-[#a23b3b]">Sorry, something went wrong. Please try again in a moment.</p>}
+        </div>
       </form>
     </div>
   );

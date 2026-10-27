@@ -16,6 +16,7 @@ interface AdminOrder {
   shippingPhone: string | null;
   whatsappUpdates: boolean;
   whatsappMessages: { id: string; templateName: string; state: string; attempts: number; lastErrorCode: string | null; lastErrorMessage: string | null; createdAt: string; sentAt: string | null; deliveredAt: string | null; readAt: string | null }[];
+  returnRequest: { id: string; reason: string; details: string | null; status: 'REQUESTED' | 'APPROVED' | 'REJECTED'; adminNote: string | null; createdAt: string } | null;
   user: { name: string; email: string };
   items: { id: string; productName: string; price: string | number; quantity: number }[];
 }
@@ -47,6 +48,28 @@ export default function AdminOrders() {
   // Load server state when the admin session becomes available.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
+
+  const updateReturn = async (id: string, status: 'APPROVED' | 'REJECTED') => {
+    if (!token) return;
+    const adminNote = window.prompt(status === 'APPROVED' ? 'Optional note for the customer (pickup/refund details):' : 'Optional reason for rejecting this return:') ?? '';
+    setUpdatingOrder(id);
+    setError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/admin/orders/${id}/return`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status, adminNote }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not update the return request.');
+      setNotice(`Return ${status === 'APPROVED' ? 'approved' : 'rejected'}. After the parcel comes back, set the order status to Returned.`);
+      await fetchOrders();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not update the return request.');
+    } finally {
+      setUpdatingOrder(null);
+    }
+  };
 
   const updateStatus = async (id: string, status: string) => {
     if (!token) return;
@@ -110,7 +133,7 @@ export default function AdminOrders() {
                       <td className="px-4 py-4"><p className="font-semibold">{order.user.name}</p><p className="text-xs text-gray-600">{order.user.email}</p></td>
                       <td className="whitespace-nowrap px-4 py-4 text-gray-700">{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td className="whitespace-nowrap px-4 py-4 font-semibold">₹{Number(order.totalAmount).toFixed(2)}</td>
-                      <td className="px-4 py-4"><span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">{statusLabels[order.status] || order.status}</span></td>
+                      <td className="px-4 py-4"><span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">{statusLabels[order.status] || order.status}</span>{order.returnRequest && <span className={`mt-1 flex w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${order.returnRequest.status === 'REQUESTED' ? 'bg-amber-100 text-amber-900' : 'bg-gray-100 text-gray-800'}`}>Return {order.returnRequest.status.toLowerCase()}</span>}</td>
                       <td className="px-4 py-4">
                         <select aria-label={`Update order ${order.id} status`} value={order.status} disabled={updatingOrder === order.id} onChange={event => updateStatus(order.id, event.target.value)} className="rounded-md border border-gray-300 bg-white px-2 py-2 text-sm text-gray-900 focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-700/20 disabled:opacity-60">
                           {statuses.map(status => <option key={status} value={status}>{statusLabels[status] || status}</option>)}
@@ -128,6 +151,20 @@ export default function AdminOrders() {
                               <p className="mt-1 text-sm text-gray-800">Mobile: {order.shippingPhone || 'Not provided for this order'}</p>
                               <p className="text-sm text-gray-800">WhatsApp updates: {order.whatsappUpdates ? 'Opted in' : 'Not opted in'}</p>
                               {order.whatsappUpdates && <div className="mt-3"><h3 className="mb-1 text-xs font-bold uppercase tracking-wide text-gray-600">WhatsApp delivery log</h3>{order.whatsappMessages.length ? <ul className="space-y-1 text-xs text-gray-700">{order.whatsappMessages.map(message => <li key={message.id} className="rounded-md bg-white/80 p-2"><span className="font-semibold">{message.templateName}</span> · {message.state} · {message.attempts} attempt(s){message.lastErrorCode && <span className="block text-red-700">{message.lastErrorCode}: {message.lastErrorMessage}</span>}</li>)}</ul> : <p className="text-xs text-gray-600">No eligible status notification queued yet.</p>}</div>}
+                              {order.returnRequest && (
+                                <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                  <h3 className="text-xs font-bold uppercase tracking-wide text-amber-900">Return request · {order.returnRequest.status.toLowerCase()}</h3>
+                                  <p className="mt-1 text-sm text-gray-900">Reason: {order.returnRequest.reason}</p>
+                                  {order.returnRequest.details && <p className="mt-1 whitespace-pre-line text-sm text-gray-800">{order.returnRequest.details}</p>}
+                                  {order.returnRequest.adminNote && <p className="mt-1 text-xs text-gray-700">Your note: {order.returnRequest.adminNote}</p>}
+                                  {order.returnRequest.status === 'REQUESTED' && (
+                                    <div className="mt-3 flex gap-2">
+                                      <button type="button" disabled={updatingOrder === order.id} onClick={() => updateReturn(order.id, 'APPROVED')} className="rounded-md bg-emerald-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">Approve return</button>
+                                      <button type="button" disabled={updatingOrder === order.id} onClick={() => updateReturn(order.id, 'REJECTED')} className="rounded-md border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-800 hover:bg-red-50 disabled:opacity-60">Reject</button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <p className="mt-3 text-xs text-gray-600">Shipping ₹{Number(order.shippingFee).toFixed(2)} · Tax ₹{Number(order.taxAmount).toFixed(2)}</p>
                             </section>
                             <section>

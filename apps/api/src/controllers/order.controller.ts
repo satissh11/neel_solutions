@@ -2,6 +2,18 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { INDIA_WIDE_SHIPPING, isValidIndianPin } from '../lib/shipping';
 
+const RETURN_WINDOW_DAYS = 7;
+const RETURN_REASONS = ['Damaged or defective item', 'Wrong item received', 'Item not as described', 'No longer needed', 'Other'];
+
+// Returns are allowed for delivered orders within RETURN_WINDOW_DAYS of delivery.
+const getReturnInfo = (order: { status: string; updatedAt: Date; statusUpdates?: { status: string; createdAt: Date }[]; returnRequest?: unknown | null }) => {
+  if (order.status !== 'DELIVERED') return { returnEligible: false, returnDeadline: null as Date | null };
+  const delivered = [...(order.statusUpdates || [])].reverse().find(update => update.status === 'DELIVERED');
+  const deliveredAt = delivered?.createdAt ?? order.updatedAt;
+  const returnDeadline = new Date(deliveredAt.getTime() + RETURN_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  return { returnEligible: !order.returnRequest && new Date() <= returnDeadline, returnDeadline };
+};
+
 export const placeOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     // @ts-ignore
@@ -158,10 +170,11 @@ export const getMyOrders = async (req: Request, res: Response): Promise<void> =>
       include: {
         items: { include: { product: { select: { name: true } } } },
         statusUpdates: { orderBy: { createdAt: 'asc' } },
+        returnRequest: true,
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json(orders);
+    res.json(orders.map(order => ({ ...order, ...getReturnInfo(order) })));
   } catch {
     res.status(500).json({ error: 'Failed to fetch orders.' });
   }
@@ -173,15 +186,54 @@ export const getOrderById = async (req: Request, res: Response): Promise<void> =
     const userId = req.user.userId;
     const order = await prisma.order.findUnique({
       where: { id: req.params.id },
-      include: { items: true, statusUpdates: { orderBy: { createdAt: 'asc' } } },
+      include: { items: true, statusUpdates: { orderBy: { createdAt: 'asc' } }, returnRequest: true },
     });
 
     if (!order) { res.status(404).json({ error: 'Order not found.' }); return; }
     // Prevent customers from accessing other customers' orders
     if (order.userId !== userId) { res.status(403).json({ error: 'Forbidden.' }); return; }
 
-    res.json(order);
+    res.json({ ...order, ...getReturnInfo(order) });
   } catch {
     res.status(500).json({ error: 'Failed to fetch order.' });
+  }
+};
+
+export const requestReturn = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // @ts-ignore
+    const userId = req.user.userId;
+    const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : '';
+    const details = typeof req.body.details === 'string' ? req.body.details.trim().slice(0, 1000) : '';
+    if (!RETURN_REASONS.includes(reason)) {
+      res.status(400).json({ error: 'Please choose a reason for the return.' });
+      return;
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { statusUpdates: { orderBy: { createdAt: 'asc' } }, returnRequest: true },
+    });
+    if (!order) { res.status(404).json({ error: 'Order not found.' }); return; }
+    if (order.userId !== userId) { res.status(403).json({ error: 'Forbidden.' }); return; }
+    if (order.status !== 'DELIVERED') {
+      res.status(400).json({ error: 'Returns can only be requested after the order is delivered.' });
+      return;
+    }
+    if (order.returnRequest) {
+      res.status(400).json({ error: 'A return has already been requested for this order.' });
+      return;
+    }
+    if (!getReturnInfo(order).returnEligible) {
+      res.status(400).json({ error: `The ${RETURN_WINDOW_DAYS}-day return window for this order has ended.` });
+      return;
+    }
+
+    const returnRequest = await prisma.orderReturn.create({
+      data: { orderId: order.id, reason, details: details || null },
+    });
+    res.status(201).json({ returnRequest, message: 'Return request submitted. We will review it and get back to you.' });
+  } catch {
+    res.status(500).json({ error: 'Could not submit the return request.' });
   }
 };

@@ -17,4 +17,6 @@ export interface StoreOrder {
   whatsappUpdates?: boolean;
   statusUpdates?: { id: string; status: string; createdAt: string }[];
   shippingPin?: string; shippingAddr?: string; shippingPhone?: string | null;
+  returnEligible?: boolean; returnDeadline?: string | null;
+  returnRequest?: { id: string; reason: string; details?: string | null; status: 'REQUESTED' | 'APPROVED' | 'REJECTED'; adminNote?: string | null; createdAt: string } | null;
 }
