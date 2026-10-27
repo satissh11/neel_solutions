@@ -77,7 +77,11 @@ export default function MyOrdersPage() {
                       </span>
                     </div>
                   </div>
-                <Link href={`/orders/${order.id}`} className="mt-4 inline-flex rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">Track your order →</Link>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <Link href={`/orders/${order.id}`} className="inline-flex rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">Track your order →</Link>
+                  {order.returnEligible && <Link href={`/orders/${order.id}#return`} className="inline-flex rounded-lg border border-emerald-800 px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">Return this order</Link>}
+                  {order.returnRequest && <span className="text-sm text-gray-600">Return {order.returnRequest.status.toLowerCase()}</span>}
+                </div>
               </div>
               ))}
             </div>

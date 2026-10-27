@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma';
 import { parseUploadedImage, productWithImageUrls } from '../lib/image';
 import { OrderStatus } from '@prisma/client';
 import { getWhatsAppTemplate } from '../lib/whatsapp';
+import { ensureReturnsTable, loadReturnsFor } from '../lib/extra-tables';
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
@@ -32,20 +33,21 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 };
 
 export const getAllOrders = async (req: Request, res: Response) => {
-  const include = {
-    user: { select: { name: true, email: true } }, items: true,
-    whatsappMessages: { orderBy: { createdAt: 'desc' as const }, select: { id: true, templateName: true, state: true, attempts: true, lastErrorCode: true, lastErrorMessage: true, createdAt: true, sentAt: true, deliveredAt: true, readAt: true } },
-  };
   try {
-    let orders;
+    const orders = await prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: { select: { name: true, email: true } }, items: true,
+        whatsappMessages: { orderBy: { createdAt: 'desc' }, select: { id: true, templateName: true, state: true, attempts: true, lastErrorCode: true, lastErrorMessage: true, createdAt: true, sentAt: true, deliveredAt: true, readAt: true } },
+      }
+    });
+    let returns = new Map<string, any>();
     try {
-      orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, include: { ...include, returnRequest: true } });
+      returns = await loadReturnsFor(orders.map(order => order.id));
     } catch (returnError: any) {
-      // Keep the order list working even if the OrderReturn table or client is not ready yet.
-      console.error('[Admin] Loading return requests failed, retrying without them:', returnError?.message);
-      orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, include });
+      console.error('[Admin] Could not load return requests:', returnError?.message);
     }
-    res.json(orders);
+    res.json(orders.map(order => ({ ...order, returnRequest: returns.get(order.id) ?? null })));
   } catch (error: any) {
     console.error('[Admin] Failed to fetch orders:', error?.message);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -61,17 +63,16 @@ export const updateReturnRequest = async (req: Request, res: Response): Promise<
       res.status(400).json({ error: 'Return status must be APPROVED or REJECTED.' });
       return;
     }
-    const existing = await prisma.orderReturn.findUnique({ where: { orderId: id } });
-    if (!existing) {
+    await ensureReturnsTable();
+    const existing = await loadReturnsFor([id]);
+    if (!existing.has(id)) {
       res.status(404).json({ error: 'No return request found for this order.' });
       return;
     }
-    const returnRequest = await prisma.orderReturn.update({
-      where: { orderId: id },
-      data: { status, adminNote: adminNote || null },
-    });
-    res.json({ returnRequest });
-  } catch {
+    await prisma.$executeRawUnsafe('UPDATE `OrderReturn` SET status = ?, adminNote = ?, updatedAt = NOW(3) WHERE orderId = ?', status, adminNote || null, id);
+    res.json({ returnRequest: { ...existing.get(id), status, adminNote: adminNote || null } });
+  } catch (error: any) {
+    console.error('[Admin] Could not update return request:', error?.message);
     res.status(500).json({ error: 'Could not update the return request.' });
   }
 };
