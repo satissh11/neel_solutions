@@ -136,8 +136,28 @@ model Order {
   whatsappUpdates  Boolean             @default(false)
   statusUpdates    OrderStatusUpdate[]
   whatsappMessages WhatsAppMessage[]
+  returnRequest    OrderReturn?
 
   items OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ReturnRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model OrderReturn {
+  id        String              @id @default(uuid())
+  orderId   String              @unique
+  order     Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason    String              @db.VarChar(120)
+  details   String?             @db.VarChar(1000)
+  status    ReturnRequestStatus @default(REQUESTED)
+  adminNote String?             @db.VarChar(500)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

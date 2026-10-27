@@ -3,6 +3,7 @@ import {
   getDashboardStats, 
   getAllOrders, 
   updateOrderStatus,
+  updateReturnRequest,
   createProduct,
   deleteProduct,
   getAdminProducts,
@@ -21,6 +22,7 @@ router.use(requireAuth, requireAdmin);
 router.get('/stats', getDashboardStats);
 router.get('/orders', getAllOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+router.put('/orders/:id/return', updateReturnRequest);
 router.get('/products', getAdminProducts);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);

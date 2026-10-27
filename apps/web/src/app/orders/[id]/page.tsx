@@ -30,6 +30,12 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: 'bg-red-100 text-red-700',
   RETURNED: 'bg-gray-100 text-gray-700',
 };
+const RETURN_REASONS = ['Damaged or defective item', 'Wrong item received', 'Item not as described', 'No longer needed', 'Other'];
+const RETURN_STATUS_TEXT: Record<string, string> = {
+  REQUESTED: 'Return requested. We are reviewing it.',
+  APPROVED: 'Return approved. Our team will contact you to arrange pickup and refund.',
+  REJECTED: 'Return request was not approved.',
+};
 const TRACKING_STEPS = ['PENDING', 'CONFIRMED', 'PROCESSING', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 function OrderDetail() {
@@ -38,6 +44,35 @@ function OrderDetail() {
   const [order, setOrder] = useState<StoreOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnReason, setReturnReason] = useState(RETURN_REASONS[0]);
+  const [returnDetails, setReturnDetails] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnError, setReturnError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const submitReturn = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!token) return;
+    setReturnSubmitting(true);
+    setReturnError('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/orders/${id}/return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: returnReason, details: returnDetails }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not submit the return request.');
+      setShowReturnForm(false);
+      setReturnDetails('');
+      setReloadKey(current => current + 1);
+    } catch (reason) {
+      setReturnError(reason instanceof Error ? reason.message : 'Could not submit the return request.');
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -58,7 +93,7 @@ function OrderDetail() {
     void loadOrder();
     const timer = window.setInterval(() => void loadOrder(), 30000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [authLoading, id, token]);
+  }, [authLoading, id, token, reloadKey]);
 
   if (authLoading || (Boolean(token) && loading)) return <div className="text-center py-20 text-gray-700">Loading order details...</div>;
   if (!token) return <div className="text-center py-20 text-gray-700">Please <Link href={`/login?returnTo=${encodeURIComponent(`/orders/${id}`)}`} className="font-semibold text-emerald-800 underline">sign in</Link> to track your order.</div>;
@@ -139,6 +174,42 @@ function OrderDetail() {
           {order.shippingPhone && <p className="text-sm text-gray-600">Mobile: {order.shippingPhone}</p>}
           {order.whatsappUpdates && <p className="text-xs text-emerald-800">WhatsApp status updates enabled for this order.</p>}
         </div>
+
+        {(order.returnRequest || order.returnEligible) && (
+          <section className="border-t pt-4">
+            <h3 className="mb-2 font-semibold text-gray-800">Return</h3>
+            {order.returnRequest ? (
+              <div className="rounded-xl bg-gray-50 p-3 text-sm text-gray-800">
+                <p className="font-medium">{RETURN_STATUS_TEXT[order.returnRequest.status]}</p>
+                <p className="mt-1 text-gray-600">Reason: {order.returnRequest.reason}</p>
+                {order.returnRequest.adminNote && <p className="mt-1 text-gray-600">Note from our team: {order.returnRequest.adminNote}</p>}
+              </div>
+            ) : showReturnForm ? (
+              <form onSubmit={submitReturn} className="space-y-3">
+                {returnError && <p role="alert" className="rounded-md bg-red-50 p-2 text-sm text-red-700">{returnError}</p>}
+                <div>
+                  <label htmlFor="return-reason" className="mb-1 block text-sm font-medium text-gray-700">Reason for return</label>
+                  <select id="return-reason" value={returnReason} onChange={event => setReturnReason(event.target.value)} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900">
+                    {RETURN_REASONS.map(reason => <option key={reason} value={reason}>{reason}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="return-details" className="mb-1 block text-sm font-medium text-gray-700">Details (optional)</label>
+                  <textarea id="return-details" rows={3} maxLength={1000} value={returnDetails} onChange={event => setReturnDetails(event.target.value)} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" disabled={returnSubmitting} className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">{returnSubmitting ? 'Submitting...' : 'Submit return request'}</button>
+                  <button type="button" onClick={() => setShowReturnForm(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" onClick={() => setShowReturnForm(true)} className="rounded-lg border border-emerald-800 px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">Return this order</button>
+                {order.returnDeadline && <span className="text-xs text-gray-500">Return available until {new Date(order.returnDeadline).toLocaleDateString('en-IN')}. See our <Link href="/returns" className="underline">returns policy</Link>.</span>}
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="border-t pt-4">
           <p className="rounded-xl bg-emerald-50 p-3 text-sm font-medium text-emerald-900">

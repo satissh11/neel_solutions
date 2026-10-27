@@ -77,6 +77,6 @@ export const DEFAULT_HOME_CONTENT: HomeContent = {
   aboutImageUrl: '/admin-nature.svg',
   newsletterEyebrow: 'A note from Neel Solutions',
   newsletterTitle: 'Wellness updates, by email',
-  newsletterDescription: 'Leave your email and your mail app will open with a subscription request addressed to our team.',
+  newsletterDescription: 'Leave your email and we will send you wellness updates from our team.',
   newsletterButtonLabel: 'Subscribe',
 };
